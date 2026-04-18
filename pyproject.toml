@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lucycode"
+version = "0.3.0"
+description = "Lucy Code — An AI-powered agentic coding assistant CLI"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Lucy Code Contributors"},
+]
+dependencies = [
+    "rich>=13.7",
+    "click>=8.1",
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "tiktoken>=0.7",
+    "prompt_toolkit>=3.0.0",
+    "tree-sitter>=0.21.0",
+]
+
+[project.optional-dependencies]
+# Cloud models (Anthropic)
+cloud = [
+    "anthropic>=0.40.0",
+]
+# Offline/local models (Ollama, LM Studio, etc.)
+offline = [
+    "aiohttp>=3.9",
+]
+# Direct weight loading (Llama.cpp)
+local = [
+    "llama-cpp-python>=0.2.75",
+]
+# Voice mode
+voice = [
+    "sounddevice>=0.4",
+    "numpy>=1.24",
+    "openai-whisper>=20231117",
+]
+# QR code for mobile access
+mobile = [
+    "qrcode[pil]>=7.4",
+]
+# Full install with everything
+all = [
+    "anthropic>=0.40.0",
+    "aiohttp>=3.9",
+    "llama-cpp-python>=0.2.75",
+    "sounddevice>=0.4",
+    "numpy>=1.24",
+    "openai-whisper>=20231117",
+    "qrcode[pil]>=7.4",
+    "pynput>=1.7.6",
+    "tree-sitter-python",
+    "tree-sitter-javascript",
+    "tree-sitter-typescript",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+lucy = "lucy.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

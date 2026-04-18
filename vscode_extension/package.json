@@ -1,0 +1,89 @@
+{
+  "name": "lucy",
+  "displayName": "Lucy Code Assistant",
+  "description": "AI-powered coding assistant — Lucy Code integration for VS Code",
+  "version": "0.1.0",
+  "publisher": "lucy",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages", "Machine Learning", "Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lucy.ask",
+        "title": "Ask Lucy Code",
+        "category": "Lucy Code"
+      },
+      {
+        "command": "lucy.fix",
+        "title": "Fix with Lucy Code",
+        "category": "Lucy Code"
+      },
+      {
+        "command": "lucy.refactor",
+        "title": "Refactor with Lucy Code",
+        "category": "Lucy Code"
+      },
+      {
+        "command": "lucy.explain",
+        "title": "Explain with Lucy Code",
+        "category": "Lucy Code"
+      },
+      {
+        "command": "lucy.test",
+        "title": "Generate Tests with Lucy Code",
+        "category": "Lucy Code"
+      },
+      {
+        "command": "lucy.startServer",
+        "title": "Start LSP Server",
+        "category": "Lucy Code"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "lucy.ask",
+          "group": "lucy@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "lucy.fix",
+          "group": "lucy@2",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "lucy.refactor",
+          "group": "lucy@3",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Lucy Code",
+      "properties": {
+        "lucy.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Path to Python interpreter for Lucy Code"
+        },
+        "lucy.model": {
+          "type": "string",
+          "default": "claude-sonnet-4-20250514",
+          "description": "Default AI model to use"
+        },
+        "lucy.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-start LSP server on extension activation"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
