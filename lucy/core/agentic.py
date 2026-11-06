@@ -51,7 +51,26 @@ class PlanStep:
             "status": self.status.value,
             "tools": self.tools_needed,
             "deps": self.dependencies,
+            "output": self.output,
+            "error": self.error,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> PlanStep:
+        status_val = data.get("status", "pending")
+        try:
+            status = PlanStepStatus(status_val)
+        except ValueError:
+            status = PlanStepStatus.PENDING
+        return cls(
+            id=data.get("id", 0),
+            description=data.get("description", ""),
+            status=status,
+            tools_needed=data.get("tools", data.get("tools_needed", [])),
+            dependencies=data.get("deps", data.get("dependencies", [])),
+            output=data.get("output", ""),
+            error=data.get("error", ""),
+        )
 
 
 @dataclass
@@ -61,6 +80,23 @@ class Plan:
     steps: list[PlanStep] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
     reasoning: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "goal": self.goal,
+            "steps": [s.to_dict() for s in self.steps],
+            "created_at": self.created_at,
+            "reasoning": self.reasoning,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Plan:
+        return cls(
+            goal=data.get("goal", ""),
+            steps=[PlanStep.from_dict(s) for s in data.get("steps", [])],
+            created_at=data.get("created_at", time.time()),
+            reasoning=data.get("reasoning", ""),
+        )
 
     def to_markdown(self) -> str:
         lines = [f"## Plan: {self.goal}\n"]

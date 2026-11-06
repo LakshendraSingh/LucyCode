@@ -89,44 +89,126 @@ async def stream_query(
 ) -> AsyncGenerator[StreamEvent | AssistantMessage, None]:
     """Stream a query to the appropriate backend.
 
-    Automatically routes to Anthropic API or local provider based on the model name.
+    Routes queries through the Universal LLM Provider System.
     Yields StreamEvents during streaming and a final AssistantMessage.
     """
     config = get_config()
     model = resolve_model(model or config.model)
     max_tokens = max_tokens or get_max_output_tokens(model)
 
-    # Route to local provider for offline models or local weights
-    from lucy.api.providers import ProviderType, detect_provider
-    provider_type, _ = detect_provider(model)
+    from lucy.api.providers.registry import get_provider
+    provider = get_provider(model)
 
-    if is_offline_model(model) or provider_type == ProviderType.WEIGHTS:
-        async for event in _stream_local_model(
-            messages=messages,
-            system_prompt=system_prompt if isinstance(system_prompt, str) else "\n".join(
-                b.get("text", "") for b in system_prompt if isinstance(b, dict)
-            ),
-            model=model,
-            tools=tools,
-            max_tokens=max_tokens,
-            abort_signal=abort_signal,
-        ):
-            yield event
-        return
+    sys_text = (
+        system_prompt
+        if isinstance(system_prompt, str)
+        else "\n".join(b.get("text", "") for b in system_prompt if isinstance(b, dict))
+    )
 
-    # Anthropic API path
-    async for event in _stream_anthropic(
-        messages=messages,
-        system_prompt=system_prompt,
+    # Normalize messages if they are Message instances
+    if messages and not isinstance(messages[0], dict):
+        api_messages = messages_to_api_params(messages)
+    else:
+        api_messages = messages
+
+    content_blocks: list[ContentBlock] = []
+    full_text = ""
+    full_thinking = ""
+    usage = MessageUsage()
+    stop_reason: str | None = None
+    response_model = model
+
+    async for chunk in provider.stream(
+        messages=api_messages,
+        system_prompt=sys_text,
         model=model,
         tools=tools,
         max_tokens=max_tokens,
         thinking_enabled=thinking_enabled,
         max_thinking_tokens=max_thinking_tokens,
-        client=client,
         abort_signal=abort_signal,
+        client=client,
     ):
-        yield event
+        if abort_signal and abort_signal.is_set():
+            raise UserAbortError()
+
+        chunk_type = chunk.get("type", "")
+
+        if chunk_type == "text_delta":
+            text = chunk.get("text", "")
+            full_text += text
+            yield StreamEvent(type="text_delta", data={"text": text})
+
+        elif chunk_type == "thinking_delta":
+            thinking = chunk.get("thinking", "")
+            full_thinking += thinking
+            yield StreamEvent(type="thinking_delta", data={"thinking": thinking})
+
+        elif chunk_type == "tool_use":
+            tool_block = ToolUseBlock(
+                id=chunk.get("id", ""),
+                name=chunk.get("name", ""),
+                input=chunk.get("input", {}),
+                thought_signature=chunk.get("thought_signature") or chunk.get("thoughtSignature", ""),
+            )
+            content_blocks.append(tool_block)
+            yield StreamEvent(
+                type="tool_use_start",
+                data={"id": tool_block.id, "name": tool_block.name},
+            )
+            yield StreamEvent(
+                type="tool_use_complete",
+                data={"id": tool_block.id, "name": tool_block.name, "input": tool_block.input},
+            )
+
+        elif chunk_type == "done":
+            response_model = chunk.get("model", model)
+            usage.input_tokens = chunk.get("prompt_eval_count", 0)
+            usage.output_tokens = chunk.get("eval_count", 0)
+            usage.cache_creation_input_tokens = chunk.get("cache_creation_input_tokens", 0)
+            usage.cache_read_input_tokens = chunk.get("cache_read_input_tokens", 0)
+            stop_reason = chunk.get("stop_reason") or (
+                "tool_use" if any(isinstance(b, ToolUseBlock) for b in content_blocks) else "end_turn"
+            )
+
+        elif chunk_type == "error":
+            err_msg = chunk.get("error", "Unknown LLM provider error")
+            err_lower = err_msg.lower()
+            if "authentication" in err_lower or "auth" in err_lower or "api key" in err_lower:
+                raise AuthenticationError(err_msg)
+            if "rate limit" in err_lower:
+                raise RateLimitError(err_msg)
+            if "overloaded" in err_lower:
+                raise OverloadedError(err_msg)
+            if "too long" in err_lower or "context window" in err_lower:
+                raise PromptTooLongError(err_msg)
+            raise LucyCodeAPIError(err_msg)
+
+    # Add accumulated thinking and text to content blocks
+    if full_thinking:
+        content_blocks.insert(0, ThinkingBlock(thinking=full_thinking))
+    if full_text:
+        content_blocks.insert(1 if full_thinking else 0, TextBlock(text=full_text))
+
+    assistant_msg = AssistantMessage(
+        content=content_blocks,
+        model=response_model,
+        stop_reason=stop_reason,
+        usage=usage,
+    )
+
+    from lucy.utils.cost import get_session_tracker
+    cost = get_session_tracker().add_usage(response_model, usage)
+    logger.debug(
+        "Provider response: model=%s, input=%d, output=%d, cost=$%.4f, stop=%s",
+        response_model,
+        usage.input_tokens,
+        usage.output_tokens,
+        cost,
+        stop_reason,
+    )
+
+    yield assistant_msg
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +271,7 @@ async def _stream_local_model(
                 id=chunk.get("id", ""),
                 name=chunk.get("name", ""),
                 input=chunk.get("input", {}),
+                thought_signature=chunk.get("thought_signature") or chunk.get("thoughtSignature", ""),
             )
             content_blocks.append(tool_block)
             yield StreamEvent(

@@ -819,6 +819,12 @@ _COMMANDS: list[Command] = [
 ]
 
 
+def register_command(command: Command) -> None:
+    """Register a new command."""
+    if command not in COMMANDS:
+        COMMANDS.append(command)
+
+
 def _register_extended_commands():
     """Register Phase 4 command modules."""
     modules = [
@@ -838,6 +844,9 @@ def _register_extended_commands():
         "lucy.commands.memory_commands",
         "lucy.commands.plan_commands",
         "lucy.commands.plugin_commands",
+        "lucy.commands.goal_commands",
+        "lucy.commands.skill_commands",
+        "lucy.commands.sandbox_commands",
     ]
     for mod_name in modules:
         try:
@@ -860,6 +869,11 @@ def get_all_commands() -> list[Command]:
 
 
 def find_command(name: str) -> Command | None:
+    for cmd in _COMMANDS:
+        if cmd.matches(name):
+            return cmd
+    # Retry in case an extended command module finished loading later
+    _register_extended_commands()
     for cmd in _COMMANDS:
         if cmd.matches(name):
             return cmd

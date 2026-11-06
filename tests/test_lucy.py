@@ -21,7 +21,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def run_async(coro):
     """Run an async function synchronously."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    return loop.run_until_complete(coro)
 
 
 class TestResult:
@@ -636,5 +640,6 @@ except Exception as e:
 # Results
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-all_pass = results.summary()
-sys.exit(0 if all_pass else 1)
+if __name__ == "__main__":
+    all_pass = results.summary()
+    sys.exit(0 if all_pass else 1)

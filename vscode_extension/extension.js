@@ -31,6 +31,8 @@ function activate(context) {
         vscode.commands.registerCommand('lucy.refactor', () => refactorWithLucyCode()),
         vscode.commands.registerCommand('lucy.explain', () => explainWithLucyCode()),
         vscode.commands.registerCommand('lucy.test', () => testWithLucyCode()),
+        vscode.commands.registerCommand('lucy.goal', () => startGoalWithLucyCode()),
+        vscode.commands.registerCommand('lucy.openTerminal', () => openLucyTerminal()),
         vscode.commands.registerCommand('lucy.startServer', () => startServer(context)),
     );
 }
@@ -141,6 +143,32 @@ async function testWithLucyCode() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
     await executeCommand('lucy.test', [editor.document.uri.toString()]);
+}
+
+async function startGoalWithLucyCode() {
+    const goal = await vscode.window.showInputBox({
+        prompt: 'Enter an autonomous goal for Lucy Code...',
+        placeHolder: 'e.g., Refactor auth service to use JWT and verify all tests pass',
+    });
+    if (goal) {
+        const config = vscode.workspace.getConfiguration('lucy');
+        const pythonPath = config.get('pythonPath', 'python3');
+        const model = config.get('model', 'gemini');
+
+        const terminal = vscode.window.createTerminal('Lucy Code — Goal');
+        terminal.show();
+        terminal.sendText(`${pythonPath} -m lucy --model ${model} --goal "${goal.replace(/"/g, '\\"')}"`);
+    }
+}
+
+function openLucyTerminal() {
+    const config = vscode.workspace.getConfiguration('lucy');
+    const pythonPath = config.get('pythonPath', 'python3');
+    const model = config.get('model', 'gemini');
+
+    const terminal = vscode.window.createTerminal('Lucy Code');
+    terminal.show();
+    terminal.sendText(`${pythonPath} -m lucy --model ${model}`);
 }
 
 async function executeCommand(command, args) {

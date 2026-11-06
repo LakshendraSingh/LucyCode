@@ -38,6 +38,16 @@
         "category": "Lucy Code"
       },
       {
+        "command": "lucy.goal",
+        "title": "Start Autonomous Goal with Lucy Code",
+        "category": "Lucy Code"
+      },
+      {
+        "command": "lucy.openTerminal",
+        "title": "Open Lucy Code Terminal",
+        "category": "Lucy Code"
+      },
+      {
         "command": "lucy.startServer",
         "title": "Start LSP Server",
         "category": "Lucy Code"

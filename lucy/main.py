@@ -135,6 +135,9 @@ async def _run_repl(
     resume_session: str | None,
     is_coordinator: bool = False,
     is_assistant: bool = False,
+    parallel_tools: bool = True,
+    sandbox: bool = False,
+    sandbox_mode: str | None = None,
 ) -> None:
     """Run the interactive REPL."""
     from rich.live import Live
@@ -227,8 +230,18 @@ async def _run_repl(
         ask_permission=lambda name, desc: _ask_permission(console, name, desc, theme),
     )
 
+    # Initialize sandbox if enabled
+    from lucy.core.sandbox import get_sandbox_manager
+    sandbox_mgr = get_sandbox_manager()
+    if sandbox or config.sandbox:
+        prof = sandbox_mode or config.sandbox_mode or "workspace"
+        sandbox_mgr.enable(prof)
+        tool_context.sandbox = sandbox_mgr
+
     # Welcome
     render_welcome(console, resolved_model, theme)
+    if sandbox_mgr.is_enabled:
+        render_info(console, f"🔒 Sandbox Active: {sandbox_mgr.config.profile.value.upper()} profile (filesystem constrained to workspace)")
 
     # Abort event for cancellation
     abort_event = asyncio.Event()
@@ -298,6 +311,19 @@ async def _run_repl(
                 render_info(console, f"Blocked by hook: {hook_results[0].reason or 'unknown'}")
                 continue
 
+            # Check for corrections and record procedural learning
+            try:
+                from lucy.core.learning import get_learning_engine
+                learning = get_learning_engine()
+                prev_assistant = next((m for m in reversed(state.messages) if isinstance(m, AssistantMessage)), None)
+                if prev_assistant and learning.detect_correction(user_input, prev_assistant.get_text()):
+                    corr = learning.extract_rule(user_input, prev_assistant.get_text(), state.cwd)
+                    learning.record_correction(corr)
+                    if verbose:
+                        render_info(console, f"🧠 Learned correction: {corr.learned_rule}")
+            except Exception as e:
+                logger.debug("Learning engine error: %s", e)
+
             # Add user message
             user_msg = create_user_message(user_input)
             state.messages.append(user_msg)
@@ -309,6 +335,14 @@ async def _run_repl(
             abort_event.clear()
 
             # Query
+            system_prompt = build_system_prompt(
+                cwd=state.cwd,
+                git_status=git_status,
+                lucymd=lucymd,
+                is_coordinator=is_coordinator,
+                is_assistant=is_assistant,
+                user_prompt=user_input,
+            )
             registry = get_tool_registry()
             params = QueryParams(
                 messages=list(state.messages),
@@ -320,6 +354,7 @@ async def _run_repl(
                 max_turns=10 if is_offline_model(state.model) else 50,
                 thinking_enabled=config.thinking_enabled,
                 abort_event=abort_event,
+                parallel_tools=parallel_tools,
             )
 
             console.print()
@@ -518,6 +553,9 @@ async def _run_print(
     ndjson: bool = False,
     is_coordinator: bool = False,
     is_assistant: bool = False,
+    parallel_tools: bool = True,
+    sandbox: bool = False,
+    sandbox_mode: str | None = None,
 ) -> None:
     """Run in non-interactive (--print) mode."""
     from lucy.api.models import resolve_model
@@ -543,6 +581,7 @@ async def _run_print(
         lucymd=lucymd,
         is_coordinator=is_coordinator,
         is_assistant=is_assistant,
+        user_prompt=prompt,
     )
 
     tool_context = ToolContext(
@@ -550,6 +589,13 @@ async def _run_print(
         permission_mode="auto_accept",
         is_interactive=False,
     )
+
+    from lucy.core.sandbox import get_sandbox_manager
+    sandbox_mgr = get_sandbox_manager()
+    if sandbox or config.sandbox:
+        prof = sandbox_mode or config.sandbox_mode or "workspace"
+        sandbox_mgr.enable(prof)
+        tool_context.sandbox = sandbox_mgr
 
     user_msg = create_user_message(prompt)
     state.messages.append(user_msg)
@@ -562,6 +608,7 @@ async def _run_print(
         tool_context=tool_context,
         model=resolved_model,
         thinking_enabled=config.thinking_enabled,
+        parallel_tools=parallel_tools,
     )
 
     if ndjson:
@@ -596,6 +643,203 @@ async def _run_print(
             elif isinstance(event, UserMessage):
                 state.messages.append(event)
         print()  # Final newline
+
+
+async def _run_goal(
+    goal_text: str | None,
+    resume_goal_id: str | None = None,
+    model: str | None = None,
+    verbose: bool = False,
+    permission_mode: str | None = None,
+    ndjson: bool = False,
+    sandbox: bool = False,
+    sandbox_mode: str | None = None,
+) -> None:
+    """Run in autonomous goal-driven mode."""
+    from rich.panel import Panel
+
+    from lucy.api.models import resolve_model
+    from lucy.core.config import get_config
+    from lucy.core.goal_engine import GoalConfig, GoalEngine, GoalStatus
+    from lucy.core.sandbox import get_sandbox_manager
+    from lucy.core.tool import ToolContext, get_tool_registry
+    from lucy.tui.renderer import create_console, render_error
+    from lucy.tui.theme import get_theme
+
+    config = get_config()
+    console = create_console()
+    theme = get_theme()
+    resolved_model = resolve_model(model or config.model)
+
+    goal_config = GoalConfig(auto_verify=True)
+    engine = GoalEngine(config=goal_config)
+    tool_context = ToolContext(
+        cwd=os.getcwd(),
+        permission_mode=permission_mode or "auto_accept",
+        is_interactive=True,
+    )
+
+    sandbox_mgr = get_sandbox_manager()
+    if sandbox or config.sandbox:
+        prof = sandbox_mode or config.sandbox_mode or "workspace"
+        sandbox_mgr.enable(prof)
+        tool_context.sandbox = sandbox_mgr
+    tools = get_tool_registry()
+
+    if not ndjson:
+        target_display = goal_text or f"Resume Goal: {resume_goal_id}"
+        console.print(
+            Panel(
+                f"[bold cyan]🎯 Goal-Driven Autonomous Engine[/bold cyan]\n\n"
+                f"[bold white]{target_display}[/bold white]\n\n"
+                f"[{theme.dim}]Model: {resolved_model} | Auto-Verification: ON | Crash-Recovery: ON[/{theme.dim}]",
+                border_style="cyan",
+            )
+        )
+
+    generator = None
+    if resume_goal_id:
+        generator = engine.resume(
+            goal_id=resume_goal_id,
+            context=tool_context,
+            model=resolved_model,
+            tools=tools,
+        )
+    elif goal_text:
+        generator = engine.execute(
+            goal_text=goal_text,
+            context=tool_context,
+            model=resolved_model,
+            tools=tools,
+        )
+    else:
+        render_error(console, "Error: No goal description or goal ID provided.")
+        return
+
+    try:
+        async for event in generator:
+            if ndjson:
+                print(event.to_ndjson(), flush=True)
+                continue
+
+            etype = event.type
+            data = event.data
+
+            if etype == "planning":
+                est = data.get("estimated_steps", 0)
+                if est > 0:
+                    console.print(f"[{theme.accent}]📋 Plan formulated:[/{theme.accent}] {est} steps required.")
+                else:
+                    console.print(f"[{theme.accent}]📋 Decomposing goal and analyzing project...[/{theme.accent}]")
+
+            elif etype == "step_start":
+                sid = data.get("step_id", 0)
+                desc = data.get("description", "")
+                done = data.get("steps_done", 0)
+                total = data.get("steps_total", 0)
+                console.print(f"\n[{theme.tool_name}]▶ Step {sid}/{total}:[/{theme.tool_name}] [bold]{desc}[/bold]")
+
+            elif etype == "step_complete":
+                sid = data.get("step_id", 0)
+                console.print(f"[{theme.success}]✓ Step {sid} finished.[/{theme.success}]")
+
+            elif etype == "step_failed":
+                sid = data.get("step_id", 0)
+                err = data.get("error", "")
+                console.print(f"[{theme.error}]✗ Step {sid} failed:[/{theme.error}] {err}")
+
+            elif etype == "verifying":
+                strat = data.get("strategy", "all")
+                console.print(f"[{theme.dim}]🔍 Running self-verification ({strat})...[/{theme.dim}]")
+
+            elif etype == "verification_result":
+                passed = data.get("passed", False)
+                results_list = data.get("results", [])
+                if passed:
+                    console.print(f"[{theme.success}]✓ Self-verification passed ({len(results_list)} checks ok)[/{theme.success}]")
+                else:
+                    console.print(f"[{theme.warning}]⚠ Self-verification flagged issues:[/{theme.warning}]")
+                    for r in results_list:
+                        if not r.get("passed", False):
+                            strat = r.get("strategy", "")
+                            cmd = r.get("command", "")
+                            errs = r.get("errors", [])
+                            first_err = errs[0] if errs else "check failed"
+                            console.print(f"  • [{theme.error}]{strat.upper()}[/{theme.error}] `{cmd}`: {first_err[:100]}")
+
+            elif etype == "correcting":
+                sid = data.get("step_id", 0)
+                att = data.get("attempt", 1)
+                max_att = data.get("max_attempts", 3)
+                console.print(f"[{theme.warning}]🛠️ Self-correcting step {sid} (attempt {att}/{max_att})...[/{theme.warning}]")
+
+            elif etype == "replanning":
+                reason = data.get("reason", "")
+                console.print(f"[{theme.accent}]🔄 Dynamic replanning:[/{theme.accent}] {reason}")
+
+            elif etype == "progress":
+                done = data.get("steps_done", 0)
+                total = data.get("steps_total", 0)
+                pct = data.get("percent", 0.0)
+                tokens = data.get("tokens_used", 0)
+                eta = data.get("eta_seconds", 0.0)
+                console.print(
+                    f"[{theme.dim}]Progress: {done}/{total} ({pct:.0f}%) | "
+                    f"Tokens: {tokens:,} | ETA: {int(eta)}s[/{theme.dim}]"
+                )
+
+            elif etype == "checkpoint":
+                path = data.get("checkpoint_path", "")
+                console.print(f"[{theme.dim}]💾 Checkpoint saved: {path}[/{theme.dim}]")
+
+            elif etype == "completed":
+                summary = data.get("summary", "")
+                files = data.get("files_modified", [])
+                panel_content = f"[bold green]Goal Succeeded![/bold green]\n\n{summary}"
+                if files:
+                    panel_content += f"\n\n[bold]Files Modified/Created ({len(files)}):[/bold]\n"
+                    panel_content += "\n".join(f"  • {f}" for f in files)
+                console.print(Panel(panel_content, border_style="green", title="Execution Summary"))
+
+            elif etype == "failed":
+                err = data.get("error", "")
+                progress_info = data.get("partial_progress", "")
+                console.print(
+                    Panel(
+                        f"[bold red]Goal Execution Failed[/bold red]\n\n"
+                        f"[bold]Error:[/bold] {err}\n"
+                        f"[bold]Progress:[/bold] {progress_info}\n\n"
+                        f"[dim]Checkpoint saved. You can inspect or resume later with /goal resume.[/dim]",
+                        border_style="red",
+                        title="Goal Failed",
+                    )
+                )
+
+            elif etype == "paused":
+                gid = data.get("goal_id", "")
+                cp_path = data.get("checkpoint_path", "")
+                console.print(
+                    Panel(
+                        f"[bold yellow]Goal Paused[/bold yellow]\n\n"
+                        f"Goal ID: {gid}\n"
+                        f"Checkpoint saved: {cp_path}\n\n"
+                        f"Resume with: [bold]lucy --resume-goal {gid}[/bold] or [bold]/goal resume {gid}[/bold]",
+                        border_style="yellow",
+                        title="Paused",
+                    )
+                )
+
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        cp = await engine.pause()
+        if not ndjson:
+            console.print(
+                f"\n[{theme.warning}]⚠ Goal execution paused by user.[/{theme.warning}]"
+            )
+            if cp:
+                console.print(
+                    f"[{theme.dim}]Checkpoint saved to ~/.lucycode/goals/{cp.goal_id}.json\n"
+                    f"Resume anytime with: lucy --resume-goal {cp.goal_id}[/{theme.dim}]"
+                )
 
 
 def _ask_permission(console, tool_name: str, description: str, theme) -> bool:
@@ -650,6 +894,12 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("--assistant", is_flag=True, help="Launch in Kairos Assistant Metaprompt mode")
 @click.option("--worker-spec", default=None, help="Headless worker spec (JSON path)")
 @click.option("--worker-out", default=None, help="Headless worker output (JSON path)")
+@click.option("--goal", default=None, help="Run in autonomous goal execution mode")
+@click.option("--resume-goal", default=None, help="Resume an autonomous goal execution by ID")
+@click.option("--serve-mcp", is_flag=True, help="Start Lucy as an MCP server")
+@click.option("--parallel-tools/--no-parallel-tools", default=True, help="Enable parallel tool execution (default: on)")
+@click.option("--sandbox", is_flag=True, default=False, help="Enable filesystem & command sandbox mode")
+@click.option("--sandbox-mode", default=None, type=click.Choice(["workspace", "strict", "read_only"]), help="Sandbox isolation profile (workspace, strict, read_only)")
 @click.argument("initial_prompt", nargs=-1, required=False)
 def cli(
     prompt: str | None,
@@ -664,11 +914,23 @@ def cli(
     assistant: bool,
     worker_spec: str | None,
     worker_out: str | None,
+    goal: str | None,
+    resume_goal: str | None,
+    serve_mcp: bool,
+    parallel_tools: bool,
+    sandbox: bool,
+    sandbox_mode: str | None,
     initial_prompt: tuple[str, ...],
 ):
     """Lucy Code — AI-powered coding assistant in your terminal."""
     if version:
         click.echo(f"Lucy Code v{__version__}")
+        return
+
+    if serve_mcp:
+        from lucy.services.mcp import MCPServerHost
+        host = MCPServerHost()
+        asyncio.run(host.start(transport="stdio"))
         return
 
     if list_sessions_flag:
@@ -693,11 +955,22 @@ def cli(
     # Determine mode
     if worker_spec and worker_out:
         asyncio.run(_run_worker(worker_spec, worker_out))
+    elif goal or resume_goal:
+        asyncio.run(_run_goal(
+            goal_text=goal,
+            resume_goal_id=resume_goal,
+            model=model,
+            verbose=verbose,
+            permission_mode=permission_mode,
+            ndjson=ndjson,
+            sandbox=sandbox,
+            sandbox_mode=sandbox_mode,
+        ))
     elif prompt is not None:
-        asyncio.run(_run_print(prompt=prompt, model=model, verbose=verbose, ndjson=ndjson, is_coordinator=coordinator, is_assistant=assistant))
+        asyncio.run(_run_print(prompt=prompt, model=model, verbose=verbose, ndjson=ndjson, is_coordinator=coordinator, is_assistant=assistant, parallel_tools=parallel_tools, sandbox=sandbox, sandbox_mode=sandbox_mode))
     elif initial_prompt:
         # Joined positional args as prompt for print mode
-        asyncio.run(_run_print(prompt=" ".join(initial_prompt), model=model, verbose=verbose, ndjson=ndjson, is_coordinator=coordinator, is_assistant=assistant))
+        asyncio.run(_run_print(prompt=" ".join(initial_prompt), model=model, verbose=verbose, ndjson=ndjson, is_coordinator=coordinator, is_assistant=assistant, parallel_tools=parallel_tools, sandbox=sandbox, sandbox_mode=sandbox_mode))
     else:
         asyncio.run(_run_repl(
             model=model,
@@ -706,6 +979,9 @@ def cli(
             resume_session=resume,
             is_coordinator=coordinator,
             is_assistant=assistant,
+            parallel_tools=parallel_tools,
+            sandbox=sandbox,
+            sandbox_mode=sandbox_mode,
         ))
 
 

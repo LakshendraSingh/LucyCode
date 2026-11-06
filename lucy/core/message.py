@@ -31,6 +31,7 @@ class ToolUseBlock:
     id: str = ""
     name: str = ""
     input: dict[str, Any] = field(default_factory=dict)
+    thought_signature: str = ""
 
 
 @dataclass
@@ -266,12 +267,15 @@ def messages_to_api_params(messages: list[Message]) -> list[dict[str, Any]]:
                 if isinstance(block, TextBlock):
                     blocks.append({"type": "text", "text": block.text})
                 elif isinstance(block, ToolUseBlock):
-                    blocks.append({
+                    tu_dict: dict[str, Any] = {
                         "type": "tool_use",
                         "id": block.id,
                         "name": block.name,
                         "input": block.input,
-                    })
+                    }
+                    if getattr(block, "thought_signature", None):
+                        tu_dict["thought_signature"] = block.thought_signature
+                    blocks.append(tu_dict)
                 elif isinstance(block, ThinkingBlock):
                     blocks.append({
                         "type": "thinking",

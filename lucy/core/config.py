@@ -55,6 +55,8 @@ class Config:
     debug: bool = False
     permission_mode: str = "default"  # default | auto_accept | plan
     thinking_enabled: bool = True
+    sandbox: bool = False
+    sandbox_mode: str = "workspace"  # workspace | strict | read_only
 
     # Paths
     config_dir: Path = field(default_factory=lambda: CONFIG_DIR)
@@ -68,6 +70,20 @@ class Config:
     # Proxy
     http_proxy: str = ""
     https_proxy: str = ""
+
+    # Universal LLM Provider API Keys & Hosts
+    openai_api_key: str = ""
+    openai_base_url: str = ""
+    gemini_api_key: str = ""
+    google_api_key: str = ""
+    groq_api_key: str = ""
+    mistral_api_key: str = ""
+    deepseek_api_key: str = ""
+    openrouter_api_key: str = ""
+    together_api_key: str = ""
+    fireworks_api_key: str = ""
+    ollama_host: str = ""
+    llamacpp_host: str = ""
 
 
 def load_config(
@@ -117,16 +133,26 @@ def load_config(
         "LUCY_DEBUG": ("debug", _str_to_bool),
         "LUCY_THEME": "theme",
         "LUCY_PERMISSION_MODE": "permission_mode",
+        "LUCY_SANDBOX": ("sandbox", _str_to_bool),
+        "LUCY_SANDBOX_MODE": "sandbox_mode",
         "HTTP_PROXY": "http_proxy",
         "HTTPS_PROXY": "https_proxy",
         "http_proxy": "http_proxy",
         "https_proxy": "https_proxy",
-        # Offline model hosts
+        # Offline & Universal LLM Provider hosts and keys
         "OLLAMA_HOST": "ollama_host",
         "OPENAI_BASE_URL": "openai_base_url",
         "OPENAI_API_KEY": "openai_api_key",
         "OPENAI_API_BASE": "openai_base_url",
         "LLAMACPP_HOST": "llamacpp_host",
+        "GEMINI_API_KEY": "gemini_api_key",
+        "GOOGLE_API_KEY": "google_api_key",
+        "GROQ_API_KEY": "groq_api_key",
+        "MISTRAL_API_KEY": "mistral_api_key",
+        "DEEPSEEK_API_KEY": "deepseek_api_key",
+        "OPENROUTER_API_KEY": "openrouter_api_key",
+        "TOGETHER_API_KEY": "together_api_key",
+        "FIREWORKS_API_KEY": "fireworks_api_key",
     }
 
     for env_key, target in env_map.items():
@@ -140,16 +166,25 @@ def load_config(
             except (ValueError, TypeError):
                 pass
         else:
-            # For new offline host fields, store as extra attrs
-            if target in ("ollama_host", "openai_base_url", "openai_api_key", "llamacpp_host"):
-                setattr(config, target, val)
-            else:
-                setattr(config, target, val)
+            setattr(config, target, val)
 
-    # Auto-detect: if no API key and no offline model set, default to Ollama
+    # Auto-detect: if no Anthropic key and default model is still active, pick an available provider
     if not config.api_key and config.model == DEFAULT_MODEL:
-        from lucy.api.models import DEFAULT_OFFLINE_MODEL
-        config.model = DEFAULT_OFFLINE_MODEL
+        if config.openai_api_key:
+            config.model = "openai:gpt-4o"
+        elif config.gemini_api_key or config.google_api_key:
+            config.model = "gemini:gemini-2.5-flash"
+        elif config.groq_api_key:
+            config.model = "groq:llama-3.3-70b-versatile"
+        elif config.deepseek_api_key:
+            config.model = "deepseek:deepseek-chat"
+        elif config.mistral_api_key:
+            config.model = "mistral:mistral-large-latest"
+        elif config.openrouter_api_key:
+            config.model = "openrouter:auto"
+        else:
+            from lucy.api.models import DEFAULT_OFFLINE_MODEL
+            config.model = DEFAULT_OFFLINE_MODEL
 
     # Ensure directories exist
     config.config_dir.mkdir(parents=True, exist_ok=True)

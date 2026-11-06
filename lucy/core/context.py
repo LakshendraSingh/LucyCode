@@ -7,11 +7,14 @@ Provides contextual information prepended to each conversation.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 async def get_git_status(cwd: str | None = None) -> str | None:
@@ -118,8 +121,11 @@ def build_system_prompt(
     custom_instructions: str | None = None,
     is_coordinator: bool = False,
     is_assistant: bool = False,
+    user_prompt: str = "",
+    files: list[str] | None = None,
+    skills_injection: str | None = None,
 ) -> str:
-    """Build the full system prompt with context sections."""
+    """Build the full system prompt with context sections and active skills."""
     if is_coordinator:
         from lucy.core.coordinator import get_coordinator_system_prompt
         sections = [get_coordinator_system_prompt()]
@@ -128,6 +134,37 @@ def build_system_prompt(
         sections = [get_kairos_system_prompt()]
     else:
         sections = [_BASE_SYSTEM_PROMPT]
+
+    # ── Skills injection (after base prompt, before LUCY.md) ──
+    if skills_injection is not None:
+        if skills_injection.strip():
+            sections.append(skills_injection.strip())
+    else:
+        try:
+            from lucy.core.skills_engine import get_skills_engine
+            engine = get_skills_engine()
+            target_cwd = cwd or os.getcwd()
+            engine.discover(target_cwd)
+            # Auto-activate skills based on project type and user prompt
+            engine.activate_for_context(target_cwd, user_prompt=user_prompt, files=files)
+            skills_text = engine.get_system_prompt_injection()
+            if skills_text:
+                sections.append(skills_text)
+        except Exception as e:
+            logger.debug("Failed to inject skills into system prompt: %s", e)
+
+    # ── Learned corrections injection ──
+    try:
+        from lucy.core.learning import get_learning_engine
+        learning = get_learning_engine()
+        corrections_text = learning.build_prompt_injection(
+            context=cwd or "",
+            user_prompt=user_prompt or custom_instructions or "",
+        )
+        if corrections_text:
+            sections.append(corrections_text)
+    except Exception as e:
+        logger.debug("Failed to inject learned corrections: %s", e)
 
     if lucymd:
         sections.append(f"<user_instructions>\n{lucymd}\n</user_instructions>")

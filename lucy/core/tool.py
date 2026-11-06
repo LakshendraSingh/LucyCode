@@ -78,6 +78,8 @@ class ToolContext:
     max_result_chars: int = 100_000
     # Callback to ask user for permission
     ask_permission: Callable[[str, str], bool] | None = None
+    # Sandbox manager (if active)
+    sandbox: Any | None = None
 
 
 # ---------------------------------------------------------------------------
