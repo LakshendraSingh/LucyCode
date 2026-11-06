@@ -29,13 +29,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest
 
-      - name: Run unit tests
+      - name: Run test suite
         run: |
-          python -m unittest tests/test_sandbox.py
-          python -m unittest tests/test_skills.py
-          python -m unittest tests/test_enhanced_mcp_amplifiers.py
-          python -m unittest tests/test_goal_engine.py
-          python -m unittest tests/test_providers.py
-          python -m unittest tests/test_lucy.py
+          python tests/test_sandbox.py
+          python tests/test_skills.py
+          python tests/test_enhanced_mcp_amplifiers.py
+          python tests/test_goal_engine.py
+          python tests/test_providers.py
+          python tests/test_lucy.py
