@@ -195,6 +195,9 @@ class AgentHarness:
     def register_task(self, task: HarnessTask) -> None:
         self.tasks[task.id] = task
 
+    def get_task(self, task_id: str) -> HarnessTask | None:
+        return self.tasks.get(task_id)
+
     def list_tasks(self, category: str | None = None) -> list[HarnessTask]:
         if category:
             return [t for t in self.tasks.values() if t.category == category]

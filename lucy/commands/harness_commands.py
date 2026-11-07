@@ -33,8 +33,15 @@ LLM Evaluation Harness Commands (/harness)
   /harness run [all|coding|debugging|security|workstation|<task_id>]
                                     Run benchmark suite or specific task
   /harness report                   Show summary of latest benchmark execution
+  /harness recursive [domain]       Run Harness² recursive self-improvement cycle
 """
             return CommandResult(output=help_text.strip())
+
+        elif sub in ("recursive", "harness2", "optimize", "rsi"):
+            from lucy.commands.harness2_commands import Harness2Command
+            h2_cmd = Harness2Command()
+            args_forward = f"optimize {arg}" if sub in ("recursive", "optimize", "rsi") else arg
+            return await h2_cmd.execute(args_forward, state)
 
         elif sub == "list":
             tasks = harness.list_tasks()
@@ -100,3 +107,4 @@ def get_commands() -> list[Command]:
 
 def register():
     register_command(HarnessCommand())
+

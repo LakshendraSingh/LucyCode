@@ -302,6 +302,43 @@ Or from inside Lucy's interactive REPL:
 
 ---
 
+## Harness²: Recursive Agent Harnessing (Google Research Inspired)
+
+Inspired by Google Research's **Harness²** framework (*Recursive Agent Harnessing for an Open World*, arXiv:2610.14224), Lucy Code implements recursive self-improvement around fixed LLM weights. Rather than fine-tuning model weights, Harness² continuously optimizes the surrounding execution harness: system prompts, domain skill heuristics, tool constraints, and error-recovery policies.
+
+### Architecture: Two Levels of Recursion
+
+1. **Task-Level Recursion: Propose — Probe — Compose**:
+   * **Propose**: Suggests targeted modifications to harness components (e.g. prompt rules, defensive import fallbacks, error-recovery policies).
+   * **Probe**: Runs candidate mutations against benchmark tasks in isolated sandboxes to measure behavioral contrasts and metrics.
+   * **Compose**: Merges winning modifications that improve execution scores and reduce failure modes without requiring rigid ground-truth answer keys.
+2. **Harness-Level Recursion: Continual Experience Library**:
+   * Distills generalized lessons learned from successful mutations into a persistent Experience Library (`~/.lucycode/harness2/experience_library.json`).
+   * Automatically injects accumulated domain experience into future prompts across coding, debugging, workstation, and security tasks.
+
+### Usage
+
+```bash
+# Run automated recursive self-improvement cycle on coding domain
+lucy --harness2 coding
+
+# Target debugging or security
+lucy --harness2 debugging
+```
+
+Or from inside Lucy's interactive REPL:
+```text
+/harness2 status                     # View active harness mutations and experience library
+/harness2 optimize coding            # Run automated Propose-Probe-Compose cycle
+/harness2 propose coding "Defensive validation" # Propose targeted rule
+/harness2 probe                      # Probe latest mutation on benchmark task
+/harness2 compose                    # Merge winning mutation into active harness
+/harness2 library                    # View distilled lessons in Continual Experience Library
+/harness2 reset                      # Revert mutations to clean baseline
+```
+
+---
+
 ## Firebase Mobile Remote Bridge & Phone Control
 
 The Firebase Remote Bridge connects your workstation directly to your mobile phone (iOS / Android) through a lightweight, zero-dependency Firebase Realtime Database gateway. It allows you to receive instant notifications and execute workstation commands remotely from your phone.
@@ -374,8 +411,8 @@ Type `/` in the interactive REPL to trigger system commands:
 | `/mcp` | Inspect & manage MCP servers | `/undo` | Revert last file modification |
 | `/dream` | Proactive background codebase indexing | `/tasks` | View running background tasks |
 | `/sessions` | Save, list, or resume chat sessions | `/voice` | Toggle voice transcription |
-| `/harness` | LLM evaluation & benchmark suite | `/firebase` | Mobile phone remote bridge & alerts |
-| `/init` | Generate a `LUCY.md` prompt for repo | | |
+| `/harness` | LLM evaluation & benchmark suite | `/harness2` | Harness² recursive self-improvement |
+| `/firebase` | Mobile phone remote bridge & alerts | `/init` | Generate a `LUCY.md` prompt for repo |
 
 ---
 
@@ -390,6 +427,7 @@ Type `/` in the interactive REPL to trigger system commands:
 | `--sandbox-mode <mode>` | | Isolation level: `workspace`, `strict`, or `read_only` |
 | `--permission-mode <mode>`| | Tool permission policy: `prompt`, `auto_accept`, or `read_only` |
 | `--harness [suite]` | | Run LLM evaluation benchmarks (`all`, `coding`, `reasoning`) |
+| `--harness2 [domain]` | | Run Harness² recursive self-improvement cycle (`coding`, `debugging`) |
 | `--firebase` | | Start Firebase mobile remote bridge daemon |
 | `--serve-mcp` | | Run Lucy as an MCP server for external IDEs |
 | `--verbose` | `-v` | Enable detailed debug logs |
@@ -423,7 +461,7 @@ lucycode/
 │   │   ├── client.py
 │   │   ├── models.py
 │   │   └── providers/   # Gemini, OpenAI, DeepSeek, Groq, Mistral, Ollama, etc.
-│   ├── commands/        # Slash command handlers (/goal, /sandbox, /skills, /harness, /firebase)
+│   ├── commands/        # Slash command handlers (/goal, /skills, /harness, /harness2, /firebase)
 │   ├── core/            # Agentic orchestration & intelligence
 │   │   ├── goal_engine.py      # Goal decomposition & auto-correction
 │   │   ├── sandbox.py          # Filesystem containment & credential guardrails
@@ -432,7 +470,8 @@ lucycode/
 │   │   ├── parallel_tools.py   # Concurrency engine for read tools
 │   │   ├── learning.py         # SQLite memory from user corrections
 │   │   ├── context_engine.py   # Token compression & diff summarization
-│   │   └── harness.py          # LLM evaluation & benchmarking engine
+│   │   ├── harness.py          # LLM evaluation & benchmarking engine
+│   │   └── recursive_harness.py # Harness² recursive agent self-improvement
 │   ├── services/        # MCP server/client, Firebase bridge & mobile web
 │   │   ├── firebase_bridge.py
 │   │   └── mobile_web/

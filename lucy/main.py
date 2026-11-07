@@ -909,6 +909,7 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("--sandbox", is_flag=True, default=False, help="Enable filesystem & command sandbox mode")
 @click.option("--sandbox-mode", default=None, type=click.Choice(["workspace", "strict", "read_only"]), help="Sandbox isolation profile (workspace, strict, read_only)")
 @click.option("--harness", default=None, help="Run LLM evaluation benchmark suite (all, coding, debugging, security, workstation)")
+@click.option("--harness2", default=None, help="Run Harness² recursive self-improvement cycle on target domain (e.g. coding, debugging)")
 @click.option("--firebase", is_flag=True, default=False, help="Enable background Firebase mobile bridge for phone alerts & remote commands")
 @click.argument("initial_prompt", nargs=-1, required=False)
 def cli(
@@ -931,6 +932,7 @@ def cli(
     sandbox: bool,
     sandbox_mode: str | None,
     harness: str | None,
+    harness2: str | None,
     firebase: bool,
     initial_prompt: tuple[str, ...],
 ):
@@ -981,6 +983,17 @@ def cli(
         click.echo(f"Starting LLM Evaluation Harness (suite: {harness})...")
         report = asyncio.run(h.run_suite(suite_name=harness, model=model))
         click.echo(report.summary_table())
+        return
+
+    # Harness²: Recursive Agent Self-Improvement mode
+    if harness2:
+        from lucy.core.recursive_harness import get_harness2
+        h2 = get_harness2()
+        click.echo(f"Starting Harness² Recursive Self-Improvement cycle (domain: {harness2})...")
+        mut, rep, ok = asyncio.run(h2.run_recursive_cycle(target_name=harness2))
+        res_str = "SUCCESS (Composed & Distilled)" if ok else "REJECTED (No improvement)"
+        click.echo(f"Outcome: {res_str} | Score Delta: {rep.score_delta:+.2f}")
+        click.echo(f"Behavioral Contrast: {rep.behavioral_contrast}")
         return
 
     # Determine mode
