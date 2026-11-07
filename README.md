@@ -266,6 +266,87 @@ LucyCode includes a native workstation automation engine inspired by OpenClaw an
 
 ---
 
+## LLM Evaluation & Benchmarking Harness
+
+Lucy Code includes an autonomous agent benchmark harness (`AgentHarness`) designed to evaluate model capability, multi-turn reasoning, tool execution, and code generation reliability across real-world developer tasks.
+
+### Features
+
+*   **Isolated Workspace Sandboxes**: Each test task executes inside a clean, isolated temporary workspace.
+*   **Automated Assertion Grading**: Tasks define programmatic verification functions (syntax validation, unit test execution, security regex checks) to score success objectively without human intervention.
+*   **Performance Metrics**: Collects step counts, token usage, execution time, and error traces.
+*   **Built-in Benchmark Tasks**:
+    *   `code_fibonacci`: Python implementation with edge cases, docstrings, and typing.
+    *   `bugfix_json_parser`: Debugging and fixing broken JSON parsing logic.
+    *   `workstation_script`: Generating multi-step desktop automation workflows.
+    *   `security_sanitizer`: Implementing sanitization logic against shell injection.
+*   **JSON Persistence & Reports**: Stores detailed benchmark records under `~/.lucycode/harness/reports/`.
+
+### Usage
+
+```bash
+# Run all benchmark suites
+lucy --harness all
+
+# Run specific suite or task
+lucy --harness coding
+lucy --harness workstation_script
+```
+
+Or from inside Lucy's interactive REPL:
+```text
+/harness list               # List available evaluation suites and tasks
+/harness run coding         # Run coding benchmark suite
+/harness report             # View summary of the latest benchmark run
+```
+
+---
+
+## Firebase Mobile Remote Bridge & Phone Control
+
+The Firebase Remote Bridge connects your workstation directly to your mobile phone (iOS / Android) through a lightweight, zero-dependency Firebase Realtime Database gateway. It allows you to receive instant notifications and execute workstation commands remotely from your phone.
+
+### Architecture & Security
+
+*   **Zero External Dependencies**: Operates entirely over standard Python `urllib.request` REST calls. No heavy SDKs or Firebase admin packages needed.
+*   **Outbound Real-Time Alerts**: Pushes build status, test completions, goal checkpoints, and security warnings directly to your phone.
+*   **Inbound Command Execution**: Dispatches commands from your phone to Lucy's execution engine, capturing stdout, stderr, and execution duration.
+*   **Safety Sandboxing**: Remote commands are checked against strict safety filters. Dangerous commands (`rm -rf /`, `sudo`, destructive fork bombs, credential inspection) are unconditionally intercepted and rejected.
+*   **Standalone Mobile Web App**: Includes a ready-to-use mobile PWA interface (`lucy/services/mobile_web/firebase_app.html`) that can be opened on any mobile browser or pinned to your home screen.
+
+### Setup & Usage
+
+1. **Configure Firebase**:
+   Set your Firebase Realtime Database URL in environment variables or via `/firebase setup`:
+   ```bash
+   export FIREBASE_DB_URL="https://your-project-default-rtdb.firebaseio.com"
+   export FIREBASE_AUTH_SECRET="optional-database-secret"
+   ```
+
+2. **Launch Bridge**:
+   ```bash
+   # Start the bridge daemon from CLI
+   lucy --firebase
+
+   # Or start interactively inside Lucy
+   /firebase start
+   ```
+
+3. **Interactive Commands**:
+   ```text
+   /firebase setup https://my-app.firebaseio.com secret123
+   /firebase start                    # Start background polling and heartbeat
+   /firebase status                   # Check connection and queue statistics
+   /firebase alert "Build finished!"  # Push instant alert to mobile device
+   /firebase poll                     # Process pending command queue once
+   /firebase stop                     # Stop background listener
+   ```
+
+4. **Mobile Web Interface**:
+   Open `lucy/services/mobile_web/firebase_app.html` in Chrome or Safari on your phone, enter your Database URL and workstation ID (`macbook-pro` by default), and you have a real-time terminal and alert feed on your mobile device.
+
+---
+
 ## The Developer Toolbelt (40+ Tools)
 
 | Category | Tools |
@@ -293,6 +374,7 @@ Type `/` in the interactive REPL to trigger system commands:
 | `/mcp` | Inspect & manage MCP servers | `/undo` | Revert last file modification |
 | `/dream` | Proactive background codebase indexing | `/tasks` | View running background tasks |
 | `/sessions` | Save, list, or resume chat sessions | `/voice` | Toggle voice transcription |
+| `/harness` | LLM evaluation & benchmark suite | `/firebase` | Mobile phone remote bridge & alerts |
 | `/init` | Generate a `LUCY.md` prompt for repo | | |
 
 ---
@@ -307,6 +389,8 @@ Type `/` in the interactive REPL to trigger system commands:
 | `--sandbox` | | Enable sandbox filesystem containment and safety checks |
 | `--sandbox-mode <mode>` | | Isolation level: `workspace`, `strict`, or `read_only` |
 | `--permission-mode <mode>`| | Tool permission policy: `prompt`, `auto_accept`, or `read_only` |
+| `--harness [suite]` | | Run LLM evaluation benchmarks (`all`, `coding`, `reasoning`) |
+| `--firebase` | | Start Firebase mobile remote bridge daemon |
 | `--serve-mcp` | | Run Lucy as an MCP server for external IDEs |
 | `--verbose` | `-v` | Enable detailed debug logs |
 
@@ -339,7 +423,7 @@ lucycode/
 │   │   ├── client.py
 │   │   ├── models.py
 │   │   └── providers/   # Gemini, OpenAI, DeepSeek, Groq, Mistral, Ollama, etc.
-│   ├── commands/        # Slash command handlers (/goal, /sandbox, /skills, etc.)
+│   ├── commands/        # Slash command handlers (/goal, /sandbox, /skills, /harness, /firebase)
 │   ├── core/            # Agentic orchestration & intelligence
 │   │   ├── goal_engine.py      # Goal decomposition & auto-correction
 │   │   ├── sandbox.py          # Filesystem containment & credential guardrails
@@ -347,12 +431,16 @@ lucycode/
 │   │   ├── verification.py     # Multi-language test/lint runners
 │   │   ├── parallel_tools.py   # Concurrency engine for read tools
 │   │   ├── learning.py         # SQLite memory from user corrections
-│   │   └── context_engine.py   # Token compression & diff summarization
-│   ├── services/        # MCP server/client implementations
+│   │   ├── context_engine.py   # Token compression & diff summarization
+│   │   └── harness.py          # LLM evaluation & benchmarking engine
+│   ├── services/        # MCP server/client, Firebase bridge & mobile web
+│   │   ├── firebase_bridge.py
+│   │   └── mobile_web/
+│   │       └── firebase_app.html
 │   ├── skills/          # Built-in SKILL.md definition packs
-│   └── tools/           # Filesystem, bash, web, and AST inspection tools
+│   └── tools/           # Filesystem, bash, web, workstation, and AST tools
 ├── native/              # C extensions for high-speed file search and diffing
-└── tests/               # Pytest suite
+└── tests/               # Unit and integration test suites
 ```
 
 ---

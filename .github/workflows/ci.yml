@@ -38,4 +38,6 @@ jobs:
           python tests/test_goal_engine.py
           python tests/test_providers.py
           python tests/test_workstation_automation.py
+          python tests/test_harness.py
+          python tests/test_firebase_bridge.py
           python tests/test_lucy.py

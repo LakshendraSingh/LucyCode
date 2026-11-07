@@ -274,3 +274,4 @@ def get_commands() -> list[Command]:
 
 def register():
     register_command(AutomateCommand())
+

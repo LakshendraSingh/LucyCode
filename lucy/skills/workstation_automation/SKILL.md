@@ -57,3 +57,4 @@ When the user asks for a reusable or recurring sequence of tasks (e.g. "Every mo
 - **Confirm Destructive Operations**: Explicitly prompt or ask before quitting apps with unsaved work or terminating processes.
 - **Visual Verification Loop**: Always take a screenshot or read page text *after* navigation or button clicks to verify the UI updated as expected.
 - **Graceful Error Recovery**: In workflows, set `on_error="skip"` for non-critical steps (like playing audio or notifications) and `on_error="stop"` for core data steps.
+

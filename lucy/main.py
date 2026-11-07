@@ -908,6 +908,8 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("--parallel-tools/--no-parallel-tools", default=True, help="Enable parallel tool execution (default: on)")
 @click.option("--sandbox", is_flag=True, default=False, help="Enable filesystem & command sandbox mode")
 @click.option("--sandbox-mode", default=None, type=click.Choice(["workspace", "strict", "read_only"]), help="Sandbox isolation profile (workspace, strict, read_only)")
+@click.option("--harness", default=None, help="Run LLM evaluation benchmark suite (all, coding, debugging, security, workstation)")
+@click.option("--firebase", is_flag=True, default=False, help="Enable background Firebase mobile bridge for phone alerts & remote commands")
 @click.argument("initial_prompt", nargs=-1, required=False)
 def cli(
     prompt: str | None,
@@ -928,6 +930,8 @@ def cli(
     parallel_tools: bool,
     sandbox: bool,
     sandbox_mode: str | None,
+    harness: str | None,
+    firebase: bool,
     initial_prompt: tuple[str, ...],
 ):
     """Lucy Code — AI-powered coding assistant in your terminal."""
@@ -959,6 +963,25 @@ def cli(
     _register_tools()
     _load_hooks()
     _initialize_plugins()
+
+    # Optional Firebase Mobile Bridge startup
+    if firebase:
+        from lucy.services.firebase_bridge import get_firebase_bridge
+        fb = get_firebase_bridge()
+        if fb.config.database_url:
+            asyncio.run(fb.start_listener())
+            click.echo(f"Firebase mobile bridge active on workstation: {fb.config.workstation_id}")
+        else:
+            click.echo("Firebase not configured. Run '/firebase setup <url>' first.")
+
+    # LLM Evaluation Harness mode
+    if harness:
+        from lucy.core.harness import get_harness
+        h = get_harness()
+        click.echo(f"Starting LLM Evaluation Harness (suite: {harness})...")
+        report = asyncio.run(h.run_suite(suite_name=harness, model=model))
+        click.echo(report.summary_table())
+        return
 
     # Determine mode
     if worker_spec and worker_out:

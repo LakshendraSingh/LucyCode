@@ -537,3 +537,4 @@ WORKSTATION_TOOLS: list[Tool] = [
     SpeakTool(),
     GetScreenInfoTool(),
 ]
+
