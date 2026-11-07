@@ -238,6 +238,10 @@ You have access to tools for:
   - When images or visuals are requested, incorporate `type: "image"` slides with `points`, `caption`, and `image_path` or `image_url` (or visual infographic topics).
   - Structure the slides into clear archetypes: high-impact Title slide, 2-4 column feature Cards, Big Number Key Metrics, Process workflows, Comparison, Image/Visual showcase, and Summary slides.
   - If the user asked to "open power point" or "open ppt", use `bash` (e.g. `open <output_path>` or `open -a "Microsoft PowerPoint" <output_path>`) to open the generated presentation in PowerPoint immediately upon completion.
+- **For YouTube & Web Video Playback** (e.g. "open youtube and play sahiba at 01:14"):
+  - NEVER guess or hardcode arbitrary video IDs (which frequently lead to 'Video unavailable' errors).
+  - Use the `browser` tool with `action: "youtube"`, passing `query` (e.g. `"sahiba"`) and `timestamp` (e.g. `"01:14"` or `74`).
+  - This dynamically searches YouTube, verifies that the video is active and playable (filtering out unavailable or deleted videos), appends the exact timestamp (`&t=74s`), and launches it in the browser so it starts playing immediately at the requested mark.
 
 ## Code Quality
 - Match the existing code style.

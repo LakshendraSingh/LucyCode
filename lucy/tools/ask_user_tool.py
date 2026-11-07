@@ -69,10 +69,19 @@ class AskUserQuestionTool(Tool):
         return True
 
     async def call(self, tool_input: dict[str, Any], context: ToolContext) -> ToolResult:
-        question = tool_input.get("question", "")
+        question = tool_input.get("question") or tool_input.get("message", "")
         explanation = tool_input.get("context", "")
-        options = tool_input.get("options", [])
+        raw_options = tool_input.get("options", [])
         default = tool_input.get("default", "")
+
+        # Normalize options if passed as dicts or objects
+        options: list[str] = []
+        if isinstance(raw_options, list):
+            for opt in raw_options:
+                if isinstance(opt, dict):
+                    options.append(str(opt.get("label") or opt.get("value") or opt))
+                else:
+                    options.append(str(opt))
 
         if not question:
             return ToolResult(error="Question is required")
@@ -81,10 +90,14 @@ class AskUserQuestionTool(Tool):
         can_prompt = context.is_interactive or (hasattr(sys.stdin, "isatty") and sys.stdin.isatty())
 
         if not can_prompt:
-            if default:
-                return ToolResult(data=f"[Non-interactive mode] User unavailable. Using recommended default: {default}")
-            fallback = options[0] if options else "Proceed with standard default"
-            return ToolResult(data=f"[Non-interactive mode] User unavailable. Selected best option: {fallback}")
+            return ToolResult(
+                data=(
+                    "[Autonomous Execution] Non-interactive mode active (user cannot be prompted directly). "
+                    "Do NOT ask the user to click or perform UI actions for you. "
+                    "Proceed autonomously using direct workstation tools (such as direct browser navigation or scripts) "
+                    "to achieve the user's objective without repeating this prompt."
+                )
+            )
 
         # Format clean, prominent user prompt
         lines = [""]

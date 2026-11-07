@@ -468,15 +468,16 @@ class BrowserTool(Tool):
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["open", "screenshot", "get_text", "get_html", "click", "type", "scroll", "js", "search"],
-                    "description": "Browser action to execute",
+                    "enum": ["open", "screenshot", "get_text", "get_html", "click", "type", "scroll", "js", "search", "youtube"],
+                    "description": "Browser action to execute: 'open', 'search', 'youtube' (to search & play a video at timestamp), 'click', 'type', 'screenshot', 'js'",
                 },
                 "url": {"type": "string", "description": "URL to navigate when action is 'open'"},
                 "browser": {"type": "string", "description": "Specific browser application to target (e.g. 'Safari', 'Google Chrome')"},
                 "selector": {"type": "string", "description": "CSS selector for click/type"},
                 "text": {"type": "string", "description": "Text to type"},
                 "script": {"type": "string", "description": "JavaScript code when action is 'js'"},
-                "query": {"type": "string", "description": "Search query when action is 'search'"},
+                "query": {"type": "string", "description": "Search query when action is 'search' or 'youtube'"},
+                "timestamp": {"type": "string", "description": "Timestamp to play at for 'youtube' (e.g. '01:14', '74s', or seconds integer)"},
             },
             "required": ["action"],
         }
@@ -493,7 +494,19 @@ class BrowserTool(Tool):
         action = tool_input.get("action")
 
         if action == "open":
-            res = await b.open_url(tool_input.get("url", ""), browser_name=tool_input.get("browser"))
+            # Check if this is a YouTube request with query/timestamp
+            u = tool_input.get("url", "")
+            q = tool_input.get("query", "")
+            ts = tool_input.get("timestamp", "")
+            if ("youtube.com" in u or "youtu.be" in u or q) and (ts or "play" in q.lower()):
+                res = await b.play_youtube(q or u, timestamp=ts, browser_name=tool_input.get("browser"))
+                return ToolResult(data=res.output) if res.success else ToolResult(error=res.error)
+            res = await b.open_url(u, browser_name=tool_input.get("browser"))
+            return ToolResult(data=res.output) if res.success else ToolResult(error=res.error)
+        elif action in ("youtube", "play_youtube"):
+            target = tool_input.get("query") or tool_input.get("url", "")
+            ts = tool_input.get("timestamp", 0)
+            res = await b.play_youtube(target, timestamp=ts, browser_name=tool_input.get("browser"))
             return ToolResult(data=res.output) if res.success else ToolResult(error=res.error)
         elif action == "search":
             res = await b.search_web_and_read(tool_input.get("query", ""))

@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import subprocess
+import sys
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -414,6 +415,149 @@ class BrowserAutomationService:
             return re.sub(r"\s+", " ", plain)[:2000]
         except Exception as e:
             return f"Search failed: {e}"
+
+    def _verify_youtube_playable(self, video_id: str) -> tuple[bool, str]:
+        """Verify that a YouTube video is live, public, and playable (not deleted, private, or region-blocked)."""
+        v_url = f"https://www.youtube.com/watch?v={video_id}"
+        try:
+            req = urllib.request.Request(
+                v_url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                raw = resp.read().decode("utf-8", errors="ignore")
+
+            status_match = re.search(r'\"playabilityStatus\":\{.*?\"status\":\"(.*?)\"', raw)
+            status = status_match.group(1) if status_match else "UNKNOWN"
+            if status != "OK":
+                return False, ""
+
+            t_match = re.search(r"<title>(.*?)</title>", raw)
+            title = t_match.group(1).replace(" - YouTube", "").strip() if t_match else ""
+            if not title or title.lower() in ("youtube", "video unavailable"):
+                return False, ""
+
+            return True, title
+        except Exception:
+            return False, ""
+
+    async def play_youtube(
+        self,
+        query_or_url: str,
+        timestamp: str | int = 0,
+        browser_name: str | None = None,
+    ) -> BrowserResult:
+        """
+        Search for a YouTube video, verify its playability, append the exact timestamp,
+        and open/play it in the browser.
+        Guarantees that broken/unavailable videos are filtered out.
+        """
+        # Parse timestamp string or int into total seconds
+        def _parse_timestamp(ts: str | int) -> int:
+            if isinstance(ts, (int, float)):
+                return max(0, int(ts))
+            s = str(ts).strip().lower()
+            if not s:
+                return 0
+            if s.endswith("s"):
+                s = s[:-1]
+            if ":" in s:
+                parts = s.split(":")
+                try:
+                    if len(parts) == 2:
+                        return int(parts[0]) * 60 + int(parts[1])
+                    elif len(parts) == 3:
+                        return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                except ValueError:
+                    pass
+            try:
+                return max(0, int(float(s)))
+            except ValueError:
+                return 0
+
+        seconds = _parse_timestamp(timestamp)
+        target_video_id = ""
+        target_title = ""
+
+        # 1. Check if input is a direct YouTube video URL
+        direct_match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})", query_or_url)
+        if direct_match:
+            candidate_id = direct_match.group(1)
+            is_ok, title = self._verify_youtube_playable(candidate_id)
+            if is_ok:
+                target_video_id = candidate_id
+                target_title = title
+
+        # 2. If not direct or direct video is unavailable, search YouTube dynamically
+        if not target_video_id:
+            search_query = query_or_url
+            # Clean natural language prefixes/suffixes
+            search_query = re.sub(r"^(?:play|open|watch)\s+", "", search_query, flags=re.IGNORECASE)
+            search_query = re.sub(r"\s+at\s+\d+[:\d+]*.*$", "", search_query, flags=re.IGNORECASE)
+            search_query = re.sub(r"\s+on\s+youtube.*$", "", search_query, flags=re.IGNORECASE).strip()
+
+            encoded_q = urllib.parse.quote_plus(search_query)
+            search_url = f"https://www.youtube.com/results?search_query={encoded_q}"
+            try:
+                req = urllib.request.Request(
+                    search_url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept-Language": "en-US,en;q=0.9",
+                    },
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    html_content = resp.read().decode("utf-8", errors="ignore")
+
+                # Extract candidates in rank order
+                candidate_ids = list(dict.fromkeys(re.findall(r"/watch\?v=([a-zA-Z0-9_-]{11})", html_content)))
+                for vid in candidate_ids[:8]:
+                    is_ok, title = self._verify_youtube_playable(vid)
+                    if is_ok:
+                        target_video_id = vid
+                        target_title = title
+                        break
+            except Exception as e:
+                logger.warning("YouTube search request failed: %s", e)
+
+        if not target_video_id:
+            return BrowserResult(
+                success=False,
+                output="",
+                error=f"Could not find an available YouTube video for query: '{query_or_url}'.",
+            )
+
+        # 3. Construct direct URL with timestamp parameter
+        final_url = f"https://www.youtube.com/watch?v={target_video_id}"
+        if seconds > 0:
+            final_url += f"&t={seconds}s"
+
+        # 4. Open in requested browser (or Safari on macOS by default)
+        bname = browser_name or ("Safari" if sys.platform == "darwin" else None)
+        open_res = await self.open_url(final_url, browser_name=bname)
+        if not open_res.success:
+            return open_res
+
+        # Activate browser window on macOS so the video is frontmost
+        if sys.platform == "darwin" and bname:
+            try:
+                subprocess.run(
+                    ["osascript", "-e", f'tell application "{bname}" to activate'],
+                    capture_output=True,
+                    timeout=3,
+                )
+            except Exception:
+                pass
+
+        time_str = f" at {timestamp} ({seconds}s)" if seconds > 0 else ""
+        return BrowserResult(
+            success=True,
+            output=f"Successfully opened and playing '{target_title}' on YouTube{time_str}.\nURL: {final_url}",
+            data={"url": final_url, "video_id": target_video_id, "title": target_title, "timestamp_seconds": seconds},
+        )
 
     async def close(self) -> None:
         """Tear down browser session."""
