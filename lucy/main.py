@@ -595,7 +595,7 @@ async def _run_print(
     tool_context = ToolContext(
         cwd=state.cwd,
         permission_mode="auto_accept",
-        is_interactive=False,
+        is_interactive=sys.stdin.isatty() if hasattr(sys.stdin, "isatty") else False,
     )
 
     from lucy.core.sandbox import get_sandbox_manager
