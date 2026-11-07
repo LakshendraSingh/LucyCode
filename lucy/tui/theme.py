@@ -33,6 +33,11 @@ class Theme:
     # Code
     code_bg: str       # Code block bg (not used in terminal)
 
+    @property
+    def accent(self) -> str:
+        """Alias for primary accent color."""
+        return self.primary
+
 
 THEMES: dict[str, Theme] = {
     "dark": Theme(
