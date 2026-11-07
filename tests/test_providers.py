@@ -6,8 +6,12 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import unittest
 from typing import Any
+
+# Ensure project root is in sys.path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lucy.api.client import stream_query
 from lucy.api.models import (

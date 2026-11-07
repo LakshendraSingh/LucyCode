@@ -101,6 +101,14 @@ def _register_tools():
     register_tool(CronDeleteTool())
     register_tool(CronListTool())
 
+    # Workstation & Desktop Automation Tools
+    try:
+        from lucy.tools.workstation_tools import WORKSTATION_TOOLS
+        for wt in WORKSTATION_TOOLS:
+            register_tool(wt)
+    except Exception as e:
+        logger.debug("Workstation tools registration skipped: %s", e)
+
 
 async def _initialize_mcp():
     """Initialize MCP server connections."""

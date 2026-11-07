@@ -37,4 +37,5 @@ jobs:
           python tests/test_enhanced_mcp_amplifiers.py
           python tests/test_goal_engine.py
           python tests/test_providers.py
+          python tests/test_workstation_automation.py
           python tests/test_lucy.py

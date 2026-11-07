@@ -238,12 +238,41 @@ lucy --serve-mcp --mcp-transport sse --mcp-port 8765
 
 ---
 
-## The Developer Toolbelt (30+ Tools)
+## Workstation & Desktop Automation (OpenClaw Mode)
+
+LucyCode includes a native workstation automation engine inspired by OpenClaw and OpenInterpreter. It provides direct, autonomous control over applications, browser navigation, display OCR, clipboard synchronization, and persistent multi-step workflow pipelines.
+
+### Capabilities
+
+*   **Application Lifecycle**: Launch (`launch_app`), focus (`focus_app`), inspect (`list_apps`), and quit applications on macOS.
+*   **Deep macOS Control**: Run arbitrary automation scripts and UI scripting via `applescript`.
+*   **Visual Vision & OCR**: Inspect display geometry (`screen_info`), capture screenshots (`screenshot`), and locate UI text or buttons via OCR (`find_on_screen`).
+*   **Browser Automation**: Search the web, extract readable text summaries (`browser search`), navigate pages (`browser open`), and capture DOM content (`browser get_text`).
+*   **Hardware & Audio**: Speak status aloud via text-to-speech (`speak`), read/write system clipboard (`clipboard`), and send native banner notifications (`notify`).
+*   **Persistent Workflows**: Create, save, and execute sequential multi-step tasks across apps, bash commands, browser URLs, and delays with automated error recovery.
+
+### Interactive Automation Control
+
+```text
+/automate workflow list                     # View saved multi-step workflows
+/automate workflow create daily-dev         # Create a reusable workflow
+/automate workflow add-step daily-dev open_app '{"app":"Slack"}' "Launch Slack"
+/automate workflow run daily-dev            # Run the workflow
+/automate apps list                         # List running applications and window counts
+/automate browser search "fastapi docs"     # Web research with clean text output
+/automate notify "Build Succeeded"          # Display desktop banner notification
+/automate speak "All tests passing"         # Speak aloud via text-to-speech
+```
+
+---
+
+## The Developer Toolbelt (40+ Tools)
 
 | Category | Tools |
 | :--- | :--- |
 | **Filesystem** | `read`, `write`, `edit`, `grep`, `glob`, `tree`, `binary_check`, `undo` |
 | **System** | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox` |
+| **Workstation** | `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `notify`, `clipboard`, `applescript`, `browser`, `workflow`, `speak`, `screen_info` |
 | **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval` |
 | **Environment** | `lsp`, `mcp`, `notebook`, `config`, `ask_user` |
 | **Exploration** | `web_search`, `web_fetch`, `computer_use`, `sleep` |
@@ -256,14 +285,15 @@ Type `/` in the interactive REPL to trigger system commands:
 
 | Command | Description | Command | Description |
 | :--- | :--- | :--- | :--- |
-| `/goal` | Autonomous goal planning & execution | `/sandbox` | Manage sandbox isolation levels |
-| `/skills` | Browse and toggle agent skills | `/plan` | Create or view execution plan |
-| `/model` | Switch model/provider on the fly | `/status` | System health & usage stats |
-| `/cost` | Token usage & cost analytics | `/memory` | Semantic memory inspection |
-| `/doctor` | Run comprehensive system diagnostics | `/undo` | Revert last file modification |
-| `/mcp` | Inspect & manage MCP servers | `/tasks` | View running background tasks |
-| `/dream` | Proactive background codebase indexing | `/voice` | Toggle voice transcription |
-| `/sessions` | Save, list, or resume chat sessions | `/init` | Generate a `LUCY.md` prompt for repo |
+| `/goal` | Autonomous goal planning & execution | `/automate` | Workstation & workflow automation |
+| `/skills` | Browse and toggle agent skills | `/sandbox` | Manage sandbox isolation levels |
+| `/model` | Switch model/provider on the fly | `/plan` | Create or view execution plan |
+| `/cost` | Token usage & cost analytics | `/status` | System health & usage stats |
+| `/doctor` | Run comprehensive system diagnostics | `/memory` | Semantic memory inspection |
+| `/mcp` | Inspect & manage MCP servers | `/undo` | Revert last file modification |
+| `/dream` | Proactive background codebase indexing | `/tasks` | View running background tasks |
+| `/sessions` | Save, list, or resume chat sessions | `/voice` | Toggle voice transcription |
+| `/init` | Generate a `LUCY.md` prompt for repo | | |
 
 ---
 
