@@ -225,3 +225,4 @@ class PresentationTool(Tool):
             )
         except Exception as e:
             return ToolResult(error=f"Failed to create presentation: {e}")
+

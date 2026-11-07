@@ -13,31 +13,31 @@ Lucy Code is an autonomous, goal-driven AI coding assistant built from the groun
 
 ## Key Highlights
 
-*   **Native Performance**: Core orchestration in **Python 3.10+** with native **C extensions** for blazingly fast regex search, AST diffing, and file traversal.
-*   **Universal LLM Engine (15+ Providers)**:
-    *   Native streaming integration with **Gemini (2.5/3.x with thought signature support)**, **OpenAI (GPT-4o, o1, o3-mini)**, **DeepSeek (V3, R1)**, **Groq**, **Mistral**, **Anthropic Claude**, **OpenRouter**, **Together AI**, **Fireworks**, **Ollama**, and **llama.cpp**.
-    *   Zero-dependency streaming fallback using Python's standard library `urllib` when third-party libraries aren't installed.
-*   **Goal-Driven Autonomous Engine**:
-    *   High-level goal decomposition and dynamic replanning.
-    *   Multi-language automated self-verification (`pytest`, `jest`, `cargo test`, `go test`, `mypy`, `tsc`, `ruff`).
-    *   Iterative self-correction with error-directed prompt feedback (up to 3 retries).
-    *   Crash-resilient checkpoints saved in `~/.lucycode/goals/` for pause, resume, and audit.
-*   **Sandbox Mode & Workspace Protection**:
-    *   **Filesystem Confinement**: Strict boundary checks restricting file writes to your workspace root and `/tmp/`.
-    *   **Credential Protection**: Guardrails blocking unauthorized read/write access to sensitive files (`~/.ssh`, `~/.aws`, `~/.gnupg`, keychains, `.env`, `*.pem`, `*.key`).
-    *   **Command Safety Checks**: Proactive interception of destructive shell operations (`rm -rf /`, `mkfs`, fork bombs, `sudo`).
-*   **Declarative Skills System**:
-    *   Open `SKILL.md` format compatible with modern agent standards.
-    *   **11 Built-in Production Skills**: `presentation-design`, `debugging`, `security-audit`, `code-review`, `performance`, `testing`, `refactoring`, `python`, `typescript`, `git-workflow`, and `api-design`.
-    *   Context-aware auto-activation based on file extensions, project root indicators, and prompt keywords.
-*   **Enhanced MCP (Client + Server + SSE)**:
-    *   Model Context Protocol client supporting `stdio`, `sse`, and `streamable-http` transports with OAuth2 auth.
-    *   **Lucy as an MCP Server** (`--serve-mcp`): Expose Lucy's tools and intelligence to Claude Desktop, Cursor, Zed, and any MCP-compliant client.
-*   **Intelligence Amplifiers**:
-    *   **Parallel Tool Execution**: Concurrently execute non-conflicting read tools (`read`, `grep`, `glob`, `tree`) to drastically cut round-trip latency.
-    *   **Learning from Corrections**: Automatically captures user feedback and correction patterns in a persistent SQLite knowledge store.
-    *   **Speculative Pre-fetching**: Analyzes imports in touched files to warm context before you even ask.
-    *   **Diff-Aware Context Compaction**: Preserves vital conversation history while compressing long token streams.
+- **Native Performance**: Core orchestration in **Python 3.10+** with native **C extensions** for blazingly fast regex search, AST diffing, and file traversal.
+- **Universal LLM Engine (15+ Providers)**:
+  - Native streaming integration with **Gemini (2.5/3.x with thought signature support)**, **OpenAI (GPT-4o, o1, o3-mini)**, **DeepSeek (V3, R1)**, **Groq**, **Mistral**, **Anthropic Claude**, **OpenRouter**, **Together AI**, **Fireworks**, **Ollama**, and **llama.cpp**.
+  - Zero-dependency streaming fallback using Python's standard library `urllib` when third-party libraries aren't installed.
+- **Goal-Driven Autonomous Engine**:
+  - High-level goal decomposition and dynamic replanning.
+  - Multi-language automated self-verification (`pytest`, `jest`, `cargo test`, `go test`, `mypy`, `tsc`, `ruff`).
+  - Iterative self-correction with error-directed prompt feedback (up to 3 retries).
+  - Crash-resilient checkpoints saved in `~/.lucycode/goals/` for pause, resume, and audit.
+- **Sandbox Mode & Workspace Protection**:
+  - **Filesystem Confinement**: Strict boundary checks restricting file writes to your workspace root and `/tmp/`.
+  - **Credential Protection**: Guardrails blocking unauthorized read/write access to sensitive files (`~/.ssh`, `~/.aws`, `~/.gnupg`, keychains, `.env`, `*.pem`, `*.key`).
+  - **Command Safety Checks**: Proactive interception of destructive shell operations (`rm -rf /`, `mkfs`, fork bombs, `sudo`).
+- **Declarative Skills System**:
+  - Open `SKILL.md` format compatible with modern agent standards.
+  - **11 Built-in Production Skills**: `presentation-design`, `debugging`, `security-audit`, `code-review`, `performance`, `testing`, `refactoring`, `python`, `typescript`, `git-workflow`, and `api-design`.
+  - Context-aware auto-activation based on file extensions, project root indicators, and prompt keywords.
+- **Enhanced MCP (Client + Server + SSE)**:
+  - Model Context Protocol client supporting `stdio`, `sse`, and `streamable-http` transports with OAuth2 auth.
+  - **Lucy as an MCP Server** (`--serve-mcp`): Expose Lucy's tools and intelligence to Claude Desktop, Cursor, Zed, and any MCP-compliant client.
+- **Intelligence Amplifiers**:
+  - **Parallel Tool Execution**: Concurrently execute non-conflicting read tools (`read`, `grep`, `glob`, `tree`) to drastically cut round-trip latency.
+  - **Learning from Corrections**: Automatically captures user feedback and correction patterns in a persistent SQLite knowledge store.
+  - **Speculative Pre-fetching**: Analyzes imports in touched files to warm context before you even ask.
+  - **Diff-Aware Context Compaction**: Preserves vital conversation history while compressing long token streams.
 
 ---
 
@@ -58,6 +58,7 @@ pip install -e .
 ### 2. Launch with Your Preferred LLM
 
 #### Google Gemini (Recommended)
+
 Lucy natively handles Google Gemini 3.x models, streaming, tool calling, and Gemini `thought_signature` requirements:
 
 ```bash
@@ -66,30 +67,36 @@ lucy --model gemini
 ```
 
 Or run single-turn prompts directly from your shell:
+
 ```bash
 lucy --model gemini -p "Write an async HTTP client in Python using httpx with retry logic"
 ```
 
 #### Groq (Ultra-Fast Inference)
+
 ```bash
 export GROQ_API_KEY="your-groq-api-key"
 lucy --model groq:llama-3.3-70b-versatile
 ```
 
 #### DeepSeek (V3 / R1 Reasoning)
+
 ```bash
 export DEEPSEEK_API_KEY="your-deepseek-api-key"
 lucy --model deepseek:deepseek-reasoner
 ```
 
 #### OpenAI (GPT-4o, o3-mini)
+
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
 lucy --model openai:gpt-4o
 ```
 
 #### Local & Offline (Ollama or Direct GGUF)
+
 No API keys or cloud access required:
+
 ```bash
 # With Ollama running locally:
 lucy --model ollama:llama3.1
@@ -106,11 +113,11 @@ Lucy Code features an integrated **Sandbox Engine** designed to keep your machin
 
 ### Sandbox Modes
 
-| Mode | Writes Permitted | Sensitive Paths | Command Safety |
-| :--- | :--- | :--- | :--- |
-| **`workspace`** *(Default)* | Workspace root & `/tmp/` | Protected (Blocked) | Block dangerous commands |
-| **`strict`** | Workspace root only | Protected (Blocked) | Strict allowlist execution |
-| **`read_only`** | No writes anywhere | Protected (Blocked) | Read-only commands only |
+| Mode                        | Writes Permitted         | Sensitive Paths     | Command Safety             |
+| :-------------------------- | :----------------------- | :------------------ | :------------------------- |
+| **`workspace`** _(Default)_ | Workspace root & `/tmp/` | Protected (Blocked) | Block dangerous commands   |
+| **`strict`**                | Workspace root only      | Protected (Blocked) | Strict allowlist execution |
+| **`read_only`**             | No writes anywhere       | Protected (Blocked) | Read-only commands only    |
 
 ### CLI Options
 
@@ -126,6 +133,7 @@ lucy --sandbox --sandbox-mode read_only
 ### Interactive Sandbox Control
 
 Inside Lucy's REPL, check status or toggle modes on the fly:
+
 ```text
 /sandbox status           # View current sandbox policy and stats
 /sandbox strict           # Switch to strict workspace isolation
@@ -160,11 +168,12 @@ lucy --goal "Implement an LRU Cache in C++ with O(1) get and put, and write comp
 ### Verification Pipeline
 
 Lucy automatically detects and runs appropriate verification suites:
-*   **Python**: `pytest`, `unittest`, `mypy`, `ruff`, `flake8`
-*   **JavaScript / TypeScript**: `jest`, `vitest`, `npm test`, `tsc --noEmit`
-*   **Rust**: `cargo test`, `cargo check`
-*   **Go**: `go test ./...`
-*   **C / C++**: `cmake --build`, `ctest`, `make test`
+
+- **Python**: `pytest`, `unittest`, `mypy`, `ruff`, `flake8`
+- **JavaScript / TypeScript**: `jest`, `vitest`, `npm test`, `tsc --noEmit`
+- **Rust**: `cargo test`, `cargo check`
+- **Go**: `go test ./...`
+- **C / C++**: `cmake --build`, `ctest`, `make test`
 
 ---
 
@@ -174,19 +183,19 @@ Lucy supports modular skills following the `SKILL.md` specification. Skills enri
 
 ### Built-in Skills (11 Production Packs)
 
-| Skill | Description | Triggers |
-| :--- | :--- | :--- |
-| `presentation-design` | Executive 16:9 widescreen PowerPoint deck generation | `ppt`, `presentation`, `slides`, `deck` |
-| `debugging` | Systematic root-cause analysis and reproduction | `bug`, `error`, `traceback`, `fail` |
-| `security-audit` | OWASP Top 10, sanitization, secrets scanning | `security`, `audit`, `vuln`, `cve` |
-| `code-review` | Thorough peer review for style and edge cases | `review`, `diff`, `pr` |
-| `performance` | Profiling, asymptotic optimization, memory leaks | `slow`, `optimize`, `benchmark` |
-| `testing` | Unit, integration, property testing & mock design | `test`, `coverage`, `mock` |
-| `refactoring` | Martin Fowler design patterns & smell eradication | `refactor`, `clean`, `modularize` |
-| `python` | Idiomatic Python 3.10+, typing, asyncio, PEP 8 | `*.py`, `pyproject.toml`, `requirements.txt` |
-| `typescript` | Strict typing, TSConfig best practices, ESM | `*.ts`, `*.tsx`, `tsconfig.json` |
-| `git-workflow` | Atomic commits, rebase strategies, PR descriptions | `git`, `commit`, `branch`, `merge` |
-| `api-design` | RESTful & gRPC schema contracts, idempotency | `api`, `endpoint`, `schema`, `rest` |
+| Skill                 | Description                                          | Triggers                                     |
+| :-------------------- | :--------------------------------------------------- | :------------------------------------------- |
+| `presentation-design` | Executive 16:9 widescreen PowerPoint deck generation | `ppt`, `presentation`, `slides`, `deck`      |
+| `debugging`           | Systematic root-cause analysis and reproduction      | `bug`, `error`, `traceback`, `fail`          |
+| `security-audit`      | OWASP Top 10, sanitization, secrets scanning         | `security`, `audit`, `vuln`, `cve`           |
+| `code-review`         | Thorough peer review for style and edge cases        | `review`, `diff`, `pr`                       |
+| `performance`         | Profiling, asymptotic optimization, memory leaks     | `slow`, `optimize`, `benchmark`              |
+| `testing`             | Unit, integration, property testing & mock design    | `test`, `coverage`, `mock`                   |
+| `refactoring`         | Martin Fowler design patterns & smell eradication    | `refactor`, `clean`, `modularize`            |
+| `python`              | Idiomatic Python 3.10+, typing, asyncio, PEP 8       | `*.py`, `pyproject.toml`, `requirements.txt` |
+| `typescript`          | Strict typing, TSConfig best practices, ESM          | `*.ts`, `*.tsx`, `tsconfig.json`             |
+| `git-workflow`        | Atomic commits, rebase strategies, PR descriptions   | `git`, `commit`, `branch`, `merge`           |
+| `api-design`          | RESTful & gRPC schema contracts, idempotency         | `api`, `endpoint`, `schema`, `rest`          |
 
 ### Skill Management
 
@@ -245,12 +254,12 @@ LucyCode includes a native workstation automation engine inspired by OpenClaw an
 
 ### Capabilities
 
-*   **Application Lifecycle**: Launch (`launch_app`), focus (`focus_app`), inspect (`list_apps`), and quit applications on macOS.
-*   **Deep macOS Control**: Run arbitrary automation scripts and UI scripting via `applescript`.
-*   **Visual Vision & OCR**: Inspect display geometry (`screen_info`), capture screenshots (`screenshot`), and locate UI text or buttons via OCR (`find_on_screen`).
-*   **Browser Automation**: Search the web, extract readable text summaries (`browser search`), navigate pages (`browser open`), and capture DOM content (`browser get_text`).
-*   **Hardware & Audio**: Speak status aloud via text-to-speech (`speak`), read/write system clipboard (`clipboard`), and send native banner notifications (`notify`).
-*   **Persistent Workflows**: Create, save, and execute sequential multi-step tasks across apps, bash commands, browser URLs, and delays with automated error recovery.
+- **Application Lifecycle**: Launch (`launch_app`), focus (`focus_app`), inspect (`list_apps`), and quit applications on macOS.
+- **Deep macOS Control**: Run arbitrary automation scripts and UI scripting via `applescript`.
+- **Visual Vision & OCR**: Inspect display geometry (`screen_info`), capture screenshots (`screenshot`), and locate UI text or buttons via OCR (`find_on_screen`).
+- **Browser Automation**: Search the web, extract readable text summaries (`browser search`), navigate pages (`browser open`), and capture DOM content (`browser get_text`).
+- **Hardware & Audio**: Speak status aloud via text-to-speech (`speak`), read/write system clipboard (`clipboard`), and send native banner notifications (`notify`).
+- **Persistent Workflows**: Create, save, and execute sequential multi-step tasks across apps, bash commands, browser URLs, and delays with automated error recovery.
 
 ### Interactive Automation Control
 
@@ -273,21 +282,21 @@ LucyCode incorporates an executive presentation generation engine that creates m
 
 ### Key Capabilities
 
-*   **16:9 Widescreen Canvas**: Generates standard widescreen presentations (13.333" x 7.5" / 1280x720 pt) with generous margins and breathing room.
-*   **Curated Design Themes**:
-    *   `modern_dark`: Deep obsidian/slate background (#0F172A) with electric indigo and cyan accents. Perfect for developer tools and AI tech.
-    *   `clean_light`: Pure crisp white background (#FFFFFF) with subtle gray card containers and royal blue accents. Perfect for business and enterprise.
-    *   `executive_navy`: Deep royal navy background (#0A192F) with champagne gold and amber accents. Perfect for investor pitch decks and board reviews.
-    *   `warm_editorial`: Warm alabaster sand (#FDFBF7) with terracotta accents. Perfect for research briefs and narrative presentations.
-    *   `vibrant_tech`: High-contrast dark cyber theme (#090D16) with vivid violet and teal accents.
-*   **Slide Archetypes**:
-    *   **Hero / Title**: High-impact cover with category pill, title, subtitle, and metadata footer.
-    *   **Feature Cards**: 2, 3, or 4 column rounded cards with accent borders, category badges, and concise bullets.
-    *   **Key Metrics**: Giant 44pt+ bold numbers in accent colors with uppercase KPI labels and context.
-    *   **Process Pipeline**: Horizontal sequential workflow stages (01 Ingest -> 02 Execute -> 03 Verify -> 04 Deploy).
-    *   **Side-by-Side Comparison**: Dual-column contrast layout (e.g. Before vs After, Problem vs Solution).
-    *   **Editorial Quote**: Large stylized quotation marks with high-conviction quotes and speaker attribution.
-    *   **Summary & Roadmap**: Two-column split with checkmark takeaways on the left and action items on the right.
+- **16:9 Widescreen Canvas**: Generates standard widescreen presentations (13.333" x 7.5" / 1280x720 pt) with generous margins and breathing room.
+- **Curated Design Themes**:
+  - `modern_dark`: Deep obsidian/slate background (#0F172A) with electric indigo and cyan accents. Perfect for developer tools and AI tech.
+  - `clean_light`: Pure crisp white background (#FFFFFF) with subtle gray card containers and royal blue accents. Perfect for business and enterprise.
+  - `executive_navy`: Deep royal navy background (#0A192F) with champagne gold and amber accents. Perfect for investor pitch decks and board reviews.
+  - `warm_editorial`: Warm alabaster sand (#FDFBF7) with terracotta accents. Perfect for research briefs and narrative presentations.
+  - `vibrant_tech`: High-contrast dark cyber theme (#090D16) with vivid violet and teal accents.
+- **Slide Archetypes**:
+  - **Hero / Title**: High-impact cover with category pill, title, subtitle, and metadata footer.
+  - **Feature Cards**: 2, 3, or 4 column rounded cards with accent borders, category badges, and concise bullets.
+  - **Key Metrics**: Giant 44pt+ bold numbers in accent colors with uppercase KPI labels and context.
+  - **Process Pipeline**: Horizontal sequential workflow stages (01 Ingest -> 02 Execute -> 03 Verify -> 04 Deploy).
+  - **Side-by-Side Comparison**: Dual-column contrast layout (e.g. Before vs After, Problem vs Solution).
+  - **Editorial Quote**: Large stylized quotation marks with high-conviction quotes and speaker attribution.
+  - **Summary & Roadmap**: Two-column split with checkmark takeaways on the left and action items on the right.
 
 ### Interactive Slash Commands
 
@@ -301,6 +310,7 @@ LucyCode incorporates an executive presentation generation engine that creates m
 ### Tool Use
 
 The LLM can invoke the `presentation` tool directly:
+
 ```json
 {
   "action": "create",
@@ -319,15 +329,15 @@ Lucy Code includes an autonomous agent benchmark harness (`AgentHarness`) design
 
 ### Features
 
-*   **Isolated Workspace Sandboxes**: Each test task executes inside a clean, isolated temporary workspace.
-*   **Automated Assertion Grading**: Tasks define programmatic verification functions (syntax validation, unit test execution, security regex checks) to score success objectively without human intervention.
-*   **Performance Metrics**: Collects step counts, token usage, execution time, and error traces.
-*   **Built-in Benchmark Tasks**:
-    *   `code_fibonacci`: Python implementation with edge cases, docstrings, and typing.
-    *   `bugfix_json_parser`: Debugging and fixing broken JSON parsing logic.
-    *   `workstation_script`: Generating multi-step desktop automation workflows.
-    *   `security_sanitizer`: Implementing sanitization logic against shell injection.
-*   **JSON Persistence & Reports**: Stores detailed benchmark records under `~/.lucycode/harness/reports/`.
+- **Isolated Workspace Sandboxes**: Each test task executes inside a clean, isolated temporary workspace.
+- **Automated Assertion Grading**: Tasks define programmatic verification functions (syntax validation, unit test execution, security regex checks) to score success objectively without human intervention.
+- **Performance Metrics**: Collects step counts, token usage, execution time, and error traces.
+- **Built-in Benchmark Tasks**:
+  - `code_fibonacci`: Python implementation with edge cases, docstrings, and typing.
+  - `bugfix_json_parser`: Debugging and fixing broken JSON parsing logic.
+  - `workstation_script`: Generating multi-step desktop automation workflows.
+  - `security_sanitizer`: Implementing sanitization logic against shell injection.
+- **JSON Persistence & Reports**: Stores detailed benchmark records under `~/.lucycode/harness/reports/`.
 
 ### Usage
 
@@ -341,6 +351,7 @@ lucy --harness workstation_script
 ```
 
 Or from inside Lucy's interactive REPL:
+
 ```text
 /harness list               # List available evaluation suites and tasks
 /harness run coding         # Run coding benchmark suite
@@ -351,17 +362,17 @@ Or from inside Lucy's interactive REPL:
 
 ## Harness²: Recursive Agent Harnessing (Google Research Inspired)
 
-Inspired by Google Research's **Harness²** framework (*Recursive Agent Harnessing for an Open World*, arXiv:2610.14224), Lucy Code implements recursive self-improvement around fixed LLM weights. Rather than fine-tuning model weights, Harness² continuously optimizes the surrounding execution harness: system prompts, domain skill heuristics, tool constraints, and error-recovery policies.
+Inspired by Google Research's **Harness²** framework (_Recursive Agent Harnessing for an Open World_, arXiv:2610.14224), Lucy Code implements recursive self-improvement around fixed LLM weights. Rather than fine-tuning model weights, Harness² continuously optimizes the surrounding execution harness: system prompts, domain skill heuristics, tool constraints, and error-recovery policies.
 
 ### Architecture: Two Levels of Recursion
 
 1. **Task-Level Recursion: Propose — Probe — Compose**:
-   * **Propose**: Suggests targeted modifications to harness components (e.g. prompt rules, defensive import fallbacks, error-recovery policies).
-   * **Probe**: Runs candidate mutations against benchmark tasks in isolated sandboxes to measure behavioral contrasts and metrics.
-   * **Compose**: Merges winning modifications that improve execution scores and reduce failure modes without requiring rigid ground-truth answer keys.
+   - **Propose**: Suggests targeted modifications to harness components (e.g. prompt rules, defensive import fallbacks, error-recovery policies).
+   - **Probe**: Runs candidate mutations against benchmark tasks in isolated sandboxes to measure behavioral contrasts and metrics.
+   - **Compose**: Merges winning modifications that improve execution scores and reduce failure modes without requiring rigid ground-truth answer keys.
 2. **Harness-Level Recursion: Continual Experience Library**:
-   * Distills generalized lessons learned from successful mutations into a persistent Experience Library (`~/.lucycode/harness2/experience_library.json`).
-   * Automatically injects accumulated domain experience into future prompts across coding, debugging, workstation, and security tasks.
+   - Distills generalized lessons learned from successful mutations into a persistent Experience Library (`~/.lucycode/harness2/experience_library.json`).
+   - Automatically injects accumulated domain experience into future prompts across coding, debugging, workstation, and security tasks.
 
 ### Usage
 
@@ -374,6 +385,7 @@ lucy --harness2 debugging
 ```
 
 Or from inside Lucy's interactive REPL:
+
 ```text
 /harness2 status                     # View active harness mutations and experience library
 /harness2 optimize coding            # Run automated Propose-Probe-Compose cycle
@@ -392,22 +404,24 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
 
 ### Architecture & Security
 
-*   **Zero External Dependencies**: Operates entirely over standard Python `urllib.request` REST calls. No heavy SDKs or Firebase admin packages needed.
-*   **Outbound Real-Time Alerts**: Pushes build status, test completions, goal checkpoints, and security warnings directly to your phone.
-*   **Inbound Command Execution**: Dispatches commands from your phone to Lucy's execution engine, capturing stdout, stderr, and execution duration.
-*   **Safety Sandboxing**: Remote commands are checked against strict safety filters. Dangerous commands (`rm -rf /`, `sudo`, destructive fork bombs, credential inspection) are unconditionally intercepted and rejected.
-*   **Standalone Mobile Web App**: Includes a ready-to-use mobile PWA interface (`lucy/services/mobile_web/firebase_app.html`) that can be opened on any mobile browser or pinned to your home screen.
+- **Zero External Dependencies**: Operates entirely over standard Python `urllib.request` REST calls. No heavy SDKs or Firebase admin packages needed.
+- **Outbound Real-Time Alerts**: Pushes build status, test completions, goal checkpoints, and security warnings directly to your phone.
+- **Inbound Command Execution**: Dispatches commands from your phone to Lucy's execution engine, capturing stdout, stderr, and execution duration.
+- **Safety Sandboxing**: Remote commands are checked against strict safety filters. Dangerous commands (`rm -rf /`, `sudo`, destructive fork bombs, credential inspection) are unconditionally intercepted and rejected.
+- **Standalone Mobile Web App**: Includes a ready-to-use mobile PWA interface (`lucy/services/mobile_web/firebase_app.html`) that can be opened on any mobile browser or pinned to your home screen.
 
 ### Setup & Usage
 
 1. **Configure Firebase**:
    Set your Firebase Realtime Database URL in environment variables or via `/firebase setup`:
+
    ```bash
    export FIREBASE_DB_URL="https://your-project-default-rtdb.firebaseio.com"
    export FIREBASE_AUTH_SECRET="optional-database-secret"
    ```
 
 2. **Launch Bridge**:
+
    ```bash
    # Start the bridge daemon from CLI
    lucy --firebase
@@ -417,6 +431,7 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
    ```
 
 3. **Interactive Commands**:
+
    ```text
    /firebase setup https://my-app.firebaseio.com secret123
    /firebase start                    # Start background polling and heartbeat
@@ -433,14 +448,14 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
 
 ## The Developer Toolbelt (40+ Tools)
 
-| Category | Tools |
-| :--- | :--- |
-| **Filesystem** | `read`, `write`, `edit`, `grep`, `glob`, `tree`, `binary_check`, `undo` |
-| **System** | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox` |
-| **Workstation** | `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `type_text`, `key_shortcut`, `notify`, `clipboard`, `applescript`, `browser`, `email`, `workflow`, `speak`, `screen_info`, `presentation` |
-| **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval` |
-| **Environment** | `lsp`, `mcp`, `notebook`, `config`, `ask_user` |
-| **Exploration** | `web_search`, `web_fetch`, `computer_use`, `sleep` |
+| Category         | Tools                                                                                                                                                                                                             |
+| :--------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Filesystem**   | `read`, `write`, `edit`, `grep`, `glob`, `tree`, `binary_check`, `undo`                                                                                                                                           |
+| **System**       | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox`                                                                                                                                               |
+| **Workstation**  | `ui_inspect`, `ui_click`, `ui_menu`, `ui_type`, `ui_verify`, `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `type_text`, `key_shortcut`, `notify`, `clipboard`, `applescript`, `browser`, `email`, `workflow`, `speak`, `screen_info`, `presentation` |
+| **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval`                                                                                                                                               |
+| **Environment**  | `lsp`, `mcp`, `notebook`, `config`, `ask_user`                                                                                                                                                                    |
+| **Exploration**  | `web_search`, `web_fetch`, `computer_use`, `sleep`                                                                                                                                                                |
 
 ---
 
@@ -448,37 +463,37 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
 
 Type `/` in the interactive REPL to trigger system commands:
 
-| Command | Description | Command | Description |
-| :--- | :--- | :--- | :--- |
-| `/goal` | Autonomous goal planning & execution | `/automate` | Workstation & workflow automation |
-| `/skills` | Browse and toggle agent skills | `/sandbox` | Manage sandbox isolation levels |
-| `/model` | Switch model/provider on the fly | `/plan` | Create or view execution plan |
-| `/cost` | Token usage & cost analytics | `/status` | System health & usage stats |
-| `/doctor` | Run comprehensive system diagnostics | `/memory` | Semantic memory inspection |
-| `/mcp` | Inspect & manage MCP servers | `/undo` | Revert last file modification |
-| `/dream` | Proactive background codebase indexing | `/tasks` | View running background tasks |
-| `/sessions` | Save, list, or resume chat sessions | `/voice` | Toggle voice transcription |
-| `/harness` | LLM evaluation & benchmark suite | `/harness2` | Harness² recursive self-improvement |
-| `/firebase` | Mobile phone remote bridge & alerts | `/presentation` | Create executive 16:9 presentation decks |
-| `/init` | Generate a `LUCY.md` prompt for repo | | |
+| Command     | Description                            | Command         | Description                              |
+| :---------- | :------------------------------------- | :-------------- | :--------------------------------------- |
+| `/goal`     | Autonomous goal planning & execution   | `/automate`     | Workstation & workflow automation        |
+| `/skills`   | Browse and toggle agent skills         | `/sandbox`      | Manage sandbox isolation levels          |
+| `/model`    | Switch model/provider on the fly       | `/plan`         | Create or view execution plan            |
+| `/cost`     | Token usage & cost analytics           | `/status`       | System health & usage stats              |
+| `/doctor`   | Run comprehensive system diagnostics   | `/memory`       | Semantic memory inspection               |
+| `/mcp`      | Inspect & manage MCP servers           | `/undo`         | Revert last file modification            |
+| `/dream`    | Proactive background codebase indexing | `/tasks`        | View running background tasks            |
+| `/sessions` | Save, list, or resume chat sessions    | `/voice`        | Toggle voice transcription               |
+| `/harness`  | LLM evaluation & benchmark suite       | `/harness2`     | Harness² recursive self-improvement      |
+| `/firebase` | Mobile phone remote bridge & alerts    | `/presentation` | Create executive 16:9 presentation decks |
+| `/init`     | Generate a `LUCY.md` prompt for repo   |                 |                                          |
 
 ---
 
 ## CLI Flags
 
-| Flag | Short | Description |
-| :--- | :--- | :--- |
-| `--model <name>` | `-m` | Model specifier (`gemini`, `openai:gpt-4o`, `deepseek:r1`, `ollama:...`) |
-| `--prompt <text>` | `-p` | Execute a single prompt non-interactively and exit |
-| `--goal <text>` | `-g` | Run a goal with automated planning, verification, and correction |
-| `--sandbox` | | Enable sandbox filesystem containment and safety checks |
-| `--sandbox-mode <mode>` | | Isolation level: `workspace`, `strict`, or `read_only` |
-| `--permission-mode <mode>`| | Tool permission policy: `prompt`, `auto_accept`, or `read_only` |
-| `--harness [suite]` | | Run LLM evaluation benchmarks (`all`, `coding`, `reasoning`) |
-| `--harness2 [domain]` | | Run Harness² recursive self-improvement cycle (`coding`, `debugging`) |
-| `--firebase` | | Start Firebase mobile remote bridge daemon |
-| `--serve-mcp` | | Run Lucy as an MCP server for external IDEs |
-| `--verbose` | `-v` | Enable detailed debug logs |
+| Flag                       | Short | Description                                                              |
+| :------------------------- | :---- | :----------------------------------------------------------------------- |
+| `--model <name>`           | `-m`  | Model specifier (`gemini`, `openai:gpt-4o`, `deepseek:r1`, `ollama:...`) |
+| `--prompt <text>`          | `-p`  | Execute a single prompt non-interactively and exit                       |
+| `--goal <text>`            | `-g`  | Run a goal with automated planning, verification, and correction         |
+| `--sandbox`                |       | Enable sandbox filesystem containment and safety checks                  |
+| `--sandbox-mode <mode>`    |       | Isolation level: `workspace`, `strict`, or `read_only`                   |
+| `--permission-mode <mode>` |       | Tool permission policy: `prompt`, `auto_accept`, or `read_only`          |
+| `--harness [suite]`        |       | Run LLM evaluation benchmarks (`all`, `coding`, `reasoning`)             |
+| `--harness2 [domain]`      |       | Run Harness² recursive self-improvement cycle (`coding`, `debugging`)    |
+| `--firebase`               |       | Start Firebase mobile remote bridge daemon                               |
+| `--serve-mcp`              |       | Run Lucy as an MCP server for external IDEs                              |
+| `--verbose`                | `-v`  | Enable detailed debug logs                                               |
 
 ---
 
@@ -533,5 +548,5 @@ lucycode/
 ---
 
 <p align="center">
-  <b>Lucy Code</b> — Built for the future of autonomous software engineering.
+  <b>Lucy Code</b> — Built for the future of autonomous software and engineering.
 </p>

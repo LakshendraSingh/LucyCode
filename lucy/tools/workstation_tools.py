@@ -739,6 +739,7 @@ class GetScreenInfoTool(Tool):
 
 
 from lucy.tools.presentation_tools import PresentationTool
+from lucy.tools.universal_ui_tools import UNIVERSAL_UI_TOOLS
 
 WORKSTATION_TOOLS: list[Tool] = [
     ScreenshotTool(),
@@ -757,5 +758,6 @@ WORKSTATION_TOOLS: list[Tool] = [
     SpeakTool(),
     GetScreenInfoTool(),
     PresentationTool(),
+    *UNIVERSAL_UI_TOOLS,
 ]
 

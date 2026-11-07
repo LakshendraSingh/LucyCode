@@ -13,14 +13,36 @@ activates_on:
 
 # Workstation & Desktop Automation Guidelines
 
-LucyCode incorporates an autonomous workstation engine (analogous to OpenClaw and OpenInterpreter) allowing end-to-end control of macOS apps, browser navigation, display OCR, native notifications, and persistent multi-step automation scripts.
+LucyCode incorporates an autonomous workstation engine allowing end-to-end control of macOS apps, browser navigation, display OCR, native notifications, and persistent multi-step automation scripts.
 
-## 1. Tool Selection Hierarchy
+## 1. Universal UI Automation & Closed-Loop Verification
+
+To generalize across ANY macOS application (native, Electron, web browser, or Catalyst) without brittle shortcut guessing or false positives:
+
+1. **Inspect Before Acting (`ui_inspect`)**:
+   - Query the active application, window title, and browser URL before taking action.
+   - If automating a browser (Safari/Chrome), verify that the active tab matches the target web application (e.g. `mail.google.com`) before trying to interact.
+2. **Deterministic Targeting (`ui_menu` and `ui_click`)**:
+   - **Menu Bar Navigation (`ui_menu`)**: Every macOS application exposes standard menus (`File > New`, `Edit > Paste`, `Window > ...`). Use `ui_menu` to open documents or trigger actions universally across 100% of apps without guessing keyboard shortcuts.
+   - **Interactive Elements (`ui_click`)**: Click buttons or controls by their accessibility label (`'Compose'`, `'Send'`, `'Save'`). If the element does not exist, `ui_click` reports an error with visible controls rather than falsely claiming success.
+3. **Reliable Text Entry (`ui_type`)**:
+   - Uses clipboard-backed injection (`pbcopy` + command-v) to prevent dropped characters or missed key events.
+4. **Closed-Loop Verification (`ui_verify`)**:
+   - Before telling the user a task is complete, run `ui_verify` to confirm that the expected state change occurred (e.g. window title updated, browser URL changed, or modal closed).
+   - **Zero False Positives**: If an element is missing or verification fails, report the actual screen state to the user instead of falsely claiming completion.
+
+## 2. Tool Selection Hierarchy
 
 - **Application Lifecycle**:
   - Use `launch_app` to start applications (e.g., Slack, Chrome, VS Code, Notes).
   - Use `focus_app` to bring an existing window to front before sending shortcuts or keystrokes.
   - Use `list_apps` to verify process state before attempting interaction.
+- **Universal UI & Menu Control**:
+  - Use `ui_inspect` to view active controls, window title, and browser URL.
+  - Use `ui_menu` for deterministic action triggering across any app.
+  - Use `ui_click` to click labeled controls with existence checks.
+  - Use `ui_type` to fill text into fields reliably.
+  - Use `ui_verify` to audit outcome before declaring success.
 - **Deep macOS App Control**:
   - Prefer `applescript` for robust, deterministic application automation (e.g. querying tabs in Chrome, triggering menu items, interacting with Mail or Calendar).
 - **Vision & Display**:
@@ -37,7 +59,7 @@ LucyCode incorporates an autonomous workstation engine (analogous to OpenClaw an
 - **Clipboard**:
   - Use `clipboard(action="get")` or `clipboard(action="set", text="...")` to bridge data between apps.
 
-## 2. Multi-Step Automation Workflows
+## 3. Multi-Step Automation Workflows
 
 When the user asks for a reusable or recurring sequence of tasks (e.g. "Every morning open Jira, Slack, and my terminal" or "Take a screenshot of the site, run tests, and notify me"):
 

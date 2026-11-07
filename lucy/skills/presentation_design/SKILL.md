@@ -142,3 +142,4 @@ Use the interactive slash command:
 - **Maximum 3-4 Concepts Per Slide**: Overloaded slides kill audience engagement. Split content across multiple slides rather than crowding one.
 - **Always Include Subtitles & Badges**: Contextual tags (e.g. `[ ARCHITECTURE ]`, `[ STRATEGY ]`) anchor the audience immediately.
 - **Verify Output File**: Always ensure the `.pptx` file was created and is non-empty upon task completion.
+

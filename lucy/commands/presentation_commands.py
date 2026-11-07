@@ -246,3 +246,4 @@ class PresentationCommand(Command):
 def get_commands() -> list[Command]:
     """Return all presentation command instances."""
     return [PresentationCommand()]
+

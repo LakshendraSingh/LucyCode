@@ -946,3 +946,4 @@ def generate_presentation_from_spec(spec: dict[str, Any]) -> str:
             )
 
     return deck.save(output_path)
+

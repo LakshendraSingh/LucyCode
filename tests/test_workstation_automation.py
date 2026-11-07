@@ -160,13 +160,14 @@ class TestWorkstationAutomation(unittest.TestCase):
 
     def test_workstation_tools_registered(self) -> None:
         """Verify all workstation tools conform to Tool interface."""
-        self.assertEqual(len(WORKSTATION_TOOLS), 16)
+        self.assertEqual(len(WORKSTATION_TOOLS), 21)
         names = [t.name for t in WORKSTATION_TOOLS]
         expected = [
             "screenshot", "find_on_screen", "launch_app", "focus_app",
             "list_apps", "type_text", "key_shortcut", "notify", "clipboard",
             "applescript", "browser", "email", "workflow", "speak", "screen_info",
             "presentation",
+            "ui_inspect", "ui_click", "ui_menu", "ui_type", "ui_verify",
         ]
         for exp in expected:
             self.assertIn(exp, names)
@@ -181,6 +182,58 @@ class TestWorkstationAutomation(unittest.TestCase):
         scr_tool = GetScreenInfoTool()
         res_scr = asyncio.run(scr_tool.call({}, ctx))
         self.assertIn("width", res_scr.data)
+
+    def test_universal_ui_service_and_tools(self) -> None:
+        """Verify UniversalUIService and closed-loop verification tools."""
+        from lucy.services.universal_ui import get_universal_ui, UniversalUIService
+        from lucy.tools.universal_ui_tools import (
+            UIInspectTool,
+            UIClickTool,
+            UIMenuTool,
+            UITypeTool,
+            UIVerifyTool,
+        )
+
+        ui = get_universal_ui()
+        self.assertIsInstance(ui, UniversalUIService)
+
+        # Frontmost app query (graceful on all OS/CI)
+        front = ui.get_frontmost_app()
+        self.assertIsInstance(front, dict)
+        self.assertIn("name", front)
+
+        # Inspection
+        insp = ui.inspect()
+        self.assertIsInstance(insp, dict)
+        self.assertIn("app", insp)
+
+        # Closed-loop verification logic test
+        res_ver_false = ui.verify("Safari", "url", "nonexistent_domain_1234567.com")
+        self.assertFalse(res_ver_false["verified"])
+        self.assertEqual(res_ver_false["check"], "url")
+
+        # Test Universal UI Tools
+        ctx = ToolContext(cwd=self.tmp_dir)
+
+        # 1. UIInspectTool
+        inspect_tool = UIInspectTool()
+        inspect_res = asyncio.run(inspect_tool.call({}, ctx))
+        self.assertFalse(inspect_res.is_error)
+        self.assertIn("app", inspect_res.data)
+
+        # 2. UIVerifyTool
+        verify_tool = UIVerifyTool()
+        # Verify false reporting triggers error rather than false positive
+        ver_res = asyncio.run(
+            verify_tool.call({"check": "url", "expected": "nonexistent_test_domain.xyz"}, ctx)
+        )
+        self.assertTrue(ver_res.is_error)
+        self.assertIn("Verification FAILED", ver_res.error)
+
+        # 3. UIMenuTool input validation
+        menu_tool = UIMenuTool()
+        menu_err = asyncio.run(menu_tool.call({"app": "TextEdit", "path": []}, ctx))
+        self.assertTrue(menu_err.is_error)
 
     def test_automate_slash_command(self) -> None:
         """Verify /automate command execution."""
