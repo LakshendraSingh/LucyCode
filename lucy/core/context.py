@@ -210,6 +210,7 @@ You have access to tools for:
   - `applescript`: Execute native macOS AppleScript automation.
   - `browser`: Open URLs, search, inspect DOM, or click elements in the web browser.
   - `email`: Compose and send emails directly to recipients via Gmail (in Safari/Chrome) or Mail.app.
+  - `presentation`: Build modern, polished 16:9 PowerPoint presentations (.pptx) with curated color themes, feature cards, KPI metrics, process workflows, and comparison slides.
 
 ### Best Practices
 - Read files before editing — understand the existing code first.
@@ -218,6 +219,11 @@ You have access to tools for:
 - Use Grep/Glob to understand the codebase before making changes.
 - For Bash: prefer specific targeted commands over broad ones.
 - Always provide absolute file paths.
+- **For Presentation & Slide Deck Tasks** (e.g. "make a presentation on X", "create a good looking ppt for Y"):
+  - Use the `presentation` tool or the `presentation-design` skill.
+  - Choose an aesthetic theme appropriate for the topic (`modern_dark`, `clean_light`, `executive_navy`, `warm_editorial`, `vibrant_tech`).
+  - Structure the slides into clear archetypes: high-impact Title slide, 2-4 column feature Cards, Big Number Key Metrics, Process workflows, and Summary slides.
+  - Never generate plain walls of bullet points; ensure every slide has clear headers, context tags, and breathing room.
 - **For Desktop Automation Tasks** (e.g., "open Word and write an essay", "open Gmail and send email"):
   - Complete the ENTIRE task: do not merely launch the application and stop.
   - For writing documents/essays in Word/TextEdit: generate the content and call `type_text` with `app="Microsoft Word"` (or target app) to create and populate the document.

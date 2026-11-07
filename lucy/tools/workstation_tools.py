@@ -738,6 +738,8 @@ class GetScreenInfoTool(Tool):
         return ToolResult(data=json.dumps(info.to_dict(), indent=2))
 
 
+from lucy.tools.presentation_tools import PresentationTool
+
 WORKSTATION_TOOLS: list[Tool] = [
     ScreenshotTool(),
     FindTextOnScreenTool(),
@@ -754,5 +756,6 @@ WORKSTATION_TOOLS: list[Tool] = [
     WorkflowTool(),
     SpeakTool(),
     GetScreenInfoTool(),
+    PresentationTool(),
 ]
 

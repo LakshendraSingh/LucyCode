@@ -28,7 +28,7 @@ Lucy Code is an autonomous, goal-driven AI coding assistant built from the groun
     *   **Command Safety Checks**: Proactive interception of destructive shell operations (`rm -rf /`, `mkfs`, fork bombs, `sudo`).
 *   **Declarative Skills System**:
     *   Open `SKILL.md` format compatible with modern agent standards.
-    *   **10 Built-in Production Skills**: `debugging`, `security-audit`, `code-review`, `performance`, `testing`, `refactoring`, `python`, `typescript`, `git-workflow`, and `api-design`.
+    *   **11 Built-in Production Skills**: `presentation-design`, `debugging`, `security-audit`, `code-review`, `performance`, `testing`, `refactoring`, `python`, `typescript`, `git-workflow`, and `api-design`.
     *   Context-aware auto-activation based on file extensions, project root indicators, and prompt keywords.
 *   **Enhanced MCP (Client + Server + SSE)**:
     *   Model Context Protocol client supporting `stdio`, `sse`, and `streamable-http` transports with OAuth2 auth.
@@ -172,10 +172,11 @@ Lucy automatically detects and runs appropriate verification suites:
 
 Lucy supports modular skills following the `SKILL.md` specification. Skills enrich the system prompt with domain-specific best practices, rules, and workflows.
 
-### Built-in Skills (10 Production Packs)
+### Built-in Skills (11 Production Packs)
 
 | Skill | Description | Triggers |
 | :--- | :--- | :--- |
+| `presentation-design` | Executive 16:9 widescreen PowerPoint deck generation | `ppt`, `presentation`, `slides`, `deck` |
 | `debugging` | Systematic root-cause analysis and reproduction | `bug`, `error`, `traceback`, `fail` |
 | `security-audit` | OWASP Top 10, sanitization, secrets scanning | `security`, `audit`, `vuln`, `cve` |
 | `code-review` | Thorough peer review for style and edge cases | `review`, `diff`, `pr` |
@@ -262,6 +263,52 @@ LucyCode includes a native workstation automation engine inspired by OpenClaw an
 /automate browser search "fastapi docs"     # Web research with clean text output
 /automate notify "Build Succeeded"          # Display desktop banner notification
 /automate speak "All tests passing"         # Speak aloud via text-to-speech
+```
+
+---
+
+## Executive Presentation & Slide Deck Design Engine
+
+LucyCode incorporates an executive presentation generation engine that creates modern, high-impact, 16:9 widescreen PowerPoint (`.pptx`) decks. It avoids the boring, cluttered, wall-of-bullet-points look of legacy slide tools and instead produces modern, card-based digital product aesthetics.
+
+### Key Capabilities
+
+*   **16:9 Widescreen Canvas**: Generates standard widescreen presentations (13.333" x 7.5" / 1280x720 pt) with generous margins and breathing room.
+*   **Curated Design Themes**:
+    *   `modern_dark`: Deep obsidian/slate background (#0F172A) with electric indigo and cyan accents. Perfect for developer tools and AI tech.
+    *   `clean_light`: Pure crisp white background (#FFFFFF) with subtle gray card containers and royal blue accents. Perfect for business and enterprise.
+    *   `executive_navy`: Deep royal navy background (#0A192F) with champagne gold and amber accents. Perfect for investor pitch decks and board reviews.
+    *   `warm_editorial`: Warm alabaster sand (#FDFBF7) with terracotta accents. Perfect for research briefs and narrative presentations.
+    *   `vibrant_tech`: High-contrast dark cyber theme (#090D16) with vivid violet and teal accents.
+*   **Slide Archetypes**:
+    *   **Hero / Title**: High-impact cover with category pill, title, subtitle, and metadata footer.
+    *   **Feature Cards**: 2, 3, or 4 column rounded cards with accent borders, category badges, and concise bullets.
+    *   **Key Metrics**: Giant 44pt+ bold numbers in accent colors with uppercase KPI labels and context.
+    *   **Process Pipeline**: Horizontal sequential workflow stages (01 Ingest -> 02 Execute -> 03 Verify -> 04 Deploy).
+    *   **Side-by-Side Comparison**: Dual-column contrast layout (e.g. Before vs After, Problem vs Solution).
+    *   **Editorial Quote**: Large stylized quotation marks with high-conviction quotes and speaker attribution.
+    *   **Summary & Roadmap**: Two-column split with checkmark takeaways on the left and action items on the right.
+
+### Interactive Slash Commands
+
+```text
+/presentation create "AI Agent Architecture"          # Generate complete 5-slide presentation
+/presentation create "Q4 Strategy" --theme clean_light # Build deck with light theme
+/presentation themes                                  # List color palettes and typography
+/presentation templates                               # View available slide layouts and schemas
+```
+
+### Tool Use
+
+The LLM can invoke the `presentation` tool directly:
+```json
+{
+  "action": "create",
+  "theme": "modern_dark",
+  "title": "Autonomous Workstations",
+  "output_path": "workstation_overview.pptx",
+  "slides": [...]
+}
 ```
 
 ---
@@ -390,7 +437,7 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
 | :--- | :--- |
 | **Filesystem** | `read`, `write`, `edit`, `grep`, `glob`, `tree`, `binary_check`, `undo` |
 | **System** | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox` |
-| **Workstation** | `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `notify`, `clipboard`, `applescript`, `browser`, `workflow`, `speak`, `screen_info` |
+| **Workstation** | `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `type_text`, `key_shortcut`, `notify`, `clipboard`, `applescript`, `browser`, `email`, `workflow`, `speak`, `screen_info`, `presentation` |
 | **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval` |
 | **Environment** | `lsp`, `mcp`, `notebook`, `config`, `ask_user` |
 | **Exploration** | `web_search`, `web_fetch`, `computer_use`, `sleep` |
@@ -412,7 +459,8 @@ Type `/` in the interactive REPL to trigger system commands:
 | `/dream` | Proactive background codebase indexing | `/tasks` | View running background tasks |
 | `/sessions` | Save, list, or resume chat sessions | `/voice` | Toggle voice transcription |
 | `/harness` | LLM evaluation & benchmark suite | `/harness2` | Harness² recursive self-improvement |
-| `/firebase` | Mobile phone remote bridge & alerts | `/init` | Generate a `LUCY.md` prompt for repo |
+| `/firebase` | Mobile phone remote bridge & alerts | `/presentation` | Create executive 16:9 presentation decks |
+| `/init` | Generate a `LUCY.md` prompt for repo | | |
 
 ---
 
