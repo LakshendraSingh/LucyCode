@@ -73,6 +73,20 @@ class GeminiProvider(LLMProvider):
 
     def translate_tools(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Translate tools into Gemini functionDeclarations format."""
+        def _sanitize_schema(schema: Any) -> Any:
+            if not isinstance(schema, dict):
+                return schema
+            cleaned = dict(schema)
+            if cleaned.get("type") == "array" and "items" not in cleaned:
+                cleaned["items"] = {"type": "string"}
+            if "properties" in cleaned and isinstance(cleaned["properties"], dict):
+                cleaned["properties"] = {
+                    k: _sanitize_schema(v) for k, v in cleaned["properties"].items()
+                }
+            if "items" in cleaned:
+                cleaned["items"] = _sanitize_schema(cleaned["items"])
+            return cleaned
+
         declarations: list[dict[str, Any]] = []
         for t in tools:
             # Handle if already in Gemini format
@@ -81,7 +95,8 @@ class GeminiProvider(LLMProvider):
 
             name = t.get("name", "")
             description = t.get("description", "")
-            schema = t.get("input_schema", t.get("parameters", {}))
+            raw_schema = t.get("input_schema", t.get("parameters", {}))
+            schema = _sanitize_schema(raw_schema)
 
             declarations.append({
                 "name": name,

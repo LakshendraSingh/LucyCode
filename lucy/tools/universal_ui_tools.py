@@ -266,3 +266,4 @@ UNIVERSAL_UI_TOOLS: list[Tool] = [
     UITypeTool(),
     UIVerifyTool(),
 ]
+
