@@ -41,22 +41,23 @@ class GeminiProvider(LLMProvider):
         return bool(self.get_api_key())
 
     def clean_model_name(self, model: str) -> str:
-        """Strip provider prefix if present and map to standard Google API model."""
+        """Strip provider prefix if present and map to active Google API model."""
         if ":" in model:
             _, model_name = model.split(":", 1)
         else:
             model_name = model
-        # Map internal/alias models to current public Gemini API models
-        if model_name in ("gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini", "gemini-2.5-flash", "gemini-2.0-flash"):
-            return "gemini-3.8-flash"
-        if model_name in ("gemini-pro-latest", "gemini-pro", "gemini-2.5-pro"):
-            return "gemini-3.8-pro"
+        # Map aliases and deprecated names to active models
+        if model_name in ("gemini", "gemini-flash", "gemini-lite", "gemini-2.5-flash"):
+            return "gemini-3.1-flash-lite"
+        if model_name in ("gemini-pro", "gemini-2.5-pro"):
+            return "gemini-pro-latest"
         return model_name
 
     def get_capabilities(self, model: str) -> ProviderCapabilities:
         clean = self.clean_model_name(model).lower()
-        supports_thinking = "3." in clean or "2.5" in clean or "thinking" in clean
-        is_pro = "pro" in clean
+        raw = model.lower()
+        supports_thinking = "3." in clean or "2.5" in clean or "pro" in clean or "thinking" in clean or "2.5" in raw
+        is_pro = "pro" in clean or "pro" in raw
         max_context = 2000000 if is_pro else 1000000
 
         return ProviderCapabilities(
@@ -67,7 +68,7 @@ class GeminiProvider(LLMProvider):
             supports_system_prompt=True,
             supports_json_mode=True,
             max_context_window=max_context,
-            max_output_tokens=65536 if ("3." in clean or "2.5" in clean) else 8192,
+            max_output_tokens=65536 if ("3." in clean or "2.5" in clean or "2.5" in raw) else 8192,
         )
 
     def translate_tools(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -367,14 +368,9 @@ class GeminiProvider(LLMProvider):
 
         def worker() -> None:
             models_to_try = [clean_model]
-            if clean_model in ("gemini-3.8-flash", "gemini-2.5-flash", "gemini-3.1-flash-lite"):
-                for alt in ("gemini-2.0-flash", "gemini-1.5-flash", "gemini-3.8-pro", "gemini-1.5-pro"):
-                    if alt not in models_to_try:
-                        models_to_try.append(alt)
-            elif clean_model in ("gemini-3.8-pro", "gemini-2.5-pro", "gemini-pro"):
-                for alt in ("gemini-3.8-flash", "gemini-2.0-flash", "gemini-1.5-pro"):
-                    if alt not in models_to_try:
-                        models_to_try.append(alt)
+            for alt in ("gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash", "gemini-pro-latest"):
+                if alt not in models_to_try:
+                    models_to_try.append(alt)
 
             last_error = ""
             for current_model in models_to_try:
