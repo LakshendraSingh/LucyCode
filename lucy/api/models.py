@@ -478,9 +478,9 @@ MODEL_ALIASES: dict[str, str] = {
     "o4-mini": "openai:o4-mini",
     # Google Gemini
     "gemini": "gemini:gemini-3.1-flash-lite",
-    "gemini-flash": "gemini:gemini-3.1-flash-lite",
+    "gemini-flash": "gemini:gemini-2.5-flash",
     "gemini-pro": "gemini:gemini-pro-latest",
-    "gemini-lite": "gemini:gemini-3.1-flash-lite",
+    "gemini-lite": "gemini:gemini-2.0-flash",
     "gemini-3.1": "gemini:gemini-3.1-flash-lite",
     "gemini-3.5": "gemini:gemini-3.5-flash",
     "gemini-3.8": "gemini:gemini-3.8-flash",

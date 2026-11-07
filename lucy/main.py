@@ -642,12 +642,24 @@ async def _run_print(
                 # This could be a tool result or normal user message
                 NDJSONEmitter.emit_message("user", event.get_text())
     else:
+        text_printed = False
         async for event in query_loop(params):
             if isinstance(event, StreamEvent):
                 if event.type == "text_delta":
                     print(event.data.get("text", ""), end="", flush=True)
+                    text_printed = True
+                elif event.type == "tool_use_start":
+                    tname = event.data.get("name", "")
+                    print(f"\n[Tool: {tname}]", flush=True)
             elif isinstance(event, AssistantMessage):
                 state.messages.append(event)
+                msg_text = event.get_text()
+                if msg_text and not text_printed:
+                    print(msg_text, flush=True)
+                    text_printed = True
+                elif event.api_error and not text_printed:
+                    print(f"Error: {event.api_error}", flush=True)
+                    text_printed = True
             elif isinstance(event, UserMessage):
                 state.messages.append(event)
         print()  # Final newline

@@ -41,11 +41,17 @@ class GeminiProvider(LLMProvider):
         return bool(self.get_api_key())
 
     def clean_model_name(self, model: str) -> str:
-        """Strip provider prefix if present."""
+        """Strip provider prefix if present and map to standard Google API model."""
         if ":" in model:
             _, model_name = model.split(":", 1)
-            return model_name
-        return model
+        else:
+            model_name = model
+        # Map internal/alias models to current public Gemini API models
+        if model_name in ("gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini"):
+            return "gemini-2.5-flash"
+        if model_name in ("gemini-pro-latest", "gemini-pro"):
+            return "gemini-2.5-pro"
+        return model_name
 
     def get_capabilities(self, model: str) -> ProviderCapabilities:
         clean = self.clean_model_name(model).lower()
