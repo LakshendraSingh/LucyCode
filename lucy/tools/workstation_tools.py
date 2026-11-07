@@ -198,6 +198,142 @@ class ListAppsTool(Tool):
         return ToolResult(data=f"Running Applications ({len(apps)} total):\n" + "\n".join(out))
 
 
+class TypeTextTool(Tool):
+    """Type or paste text into an application or frontmost window."""
+
+    @property
+    def name(self) -> str:
+        return "type_text"
+
+    @property
+    def description(self) -> str:
+        return (
+            "Type or paste text directly into a desktop application (e.g. 'Microsoft Word', 'TextEdit', 'Safari', 'Notes') "
+            "or the frontmost window. When target is Microsoft Word, creates a new document and writes the content automatically."
+        )
+
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Text, essay, message, or paragraph to write into the application"},
+                "app": {"type": "string", "description": "Target application name (e.g. 'Microsoft Word', 'TextEdit', 'Safari'). If omitted, writes to frontmost app."},
+                "method": {"type": "string", "enum": ["paste", "type"], "default": "paste", "description": "'paste' uses clipboard (cmd+v) for instant reliable insertion; 'type' types character-by-character."},
+            },
+            "required": ["text"],
+        }
+
+    def get_prompt(self) -> str:
+        return "Write essays, messages, or text into desktop application documents."
+
+    async def call(self, tool_input: dict[str, Any], context: ToolContext) -> ToolResult:
+        from lucy.services.app_automation import get_app_automation
+        auto = get_app_automation()
+        text = tool_input.get("text", "")
+        app = tool_input.get("app")
+        method = tool_input.get("method", "paste")
+
+        # Focus app if specified
+        if app:
+            auto.launch_app(app)
+            auto.focus_app(app)
+            await asyncio.sleep(0.5)
+
+        # 1. Specialized macOS Microsoft Word Automation
+        if app and ("word" in app.lower() or "microsoft word" in app.lower()):
+            escaped_text = text.replace('\\', '\\\\').replace('"', '\\"')
+            word_script = f"""
+            tell application "Microsoft Word"
+                activate
+                if (count of documents) = 0 then
+                    make new document
+                end if
+                set content of text object of active document to "{escaped_text}"
+            end tell
+            """
+            ok, out = auto.run_applescript(word_script)
+            if ok:
+                word_count = len(text.split())
+                return ToolResult(data=f"Successfully created document and wrote {word_count} words in Microsoft Word.")
+
+        # 2. Specialized TextEdit Automation
+        if app and "textedit" in app.lower():
+            escaped_text = text.replace('\\', '\\\\').replace('"', '\\"')
+            te_script = f"""
+            tell application "TextEdit"
+                activate
+                if (count of documents) = 0 then
+                    make new document
+                end if
+                set text of front document to "{escaped_text}"
+            end tell
+            """
+            ok, out = auto.run_applescript(te_script)
+            if ok:
+                return ToolResult(data=f"Successfully wrote {len(text.split())} words in TextEdit.")
+
+        # 3. Standard paste method: copy to clipboard and simulate Cmd+V
+        if method == "paste":
+            auto.set_clipboard(text)
+            target = app or (auto.get_frontmost_app().name if auto.get_frontmost_app() else "System Events")
+            ok = auto.run_shortcut(target, "cmd+v")
+            if ok:
+                return ToolResult(data=f"Successfully pasted {len(text.split())} words into {target}.")
+
+        # 4. Keystroke character by character fallback via System Events
+        escaped = text.replace('\\', '\\\\').replace('"', '\\"')
+        script = f"""
+        tell application "System Events"
+            keystroke "{escaped}"
+        end tell
+        """
+        ok, out = auto.run_applescript(script)
+        if ok:
+            return ToolResult(data=f"Successfully typed {len(text)} characters.")
+        return ToolResult(error=f"Failed to type text: {out}")
+
+
+class KeyShortcutTool(Tool):
+    """Send a keyboard shortcut or key press to an application."""
+
+    @property
+    def name(self) -> str:
+        return "key_shortcut"
+
+    @property
+    def description(self) -> str:
+        return (
+            "Send keyboard shortcuts (e.g. 'cmd+n' for new document, 'cmd+s' to save, 'return', 'tab') "
+            "to the active or target application."
+        )
+
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "shortcut": {"type": "string", "description": "Key combination (e.g. 'cmd+n', 'cmd+s', 'return', 'tab', 'cmd+enter')"},
+                "app": {"type": "string", "description": "Target application name. If omitted, targets frontmost app."},
+            },
+            "required": ["shortcut"],
+        }
+
+    def get_prompt(self) -> str:
+        return "Dispatch keyboard shortcuts to active applications."
+
+    async def call(self, tool_input: dict[str, Any], context: ToolContext) -> ToolResult:
+        from lucy.services.app_automation import get_app_automation
+        auto = get_app_automation()
+        shortcut = tool_input.get("shortcut", "")
+        app = tool_input.get("app")
+        target = app or (auto.get_frontmost_app().name if auto.get_frontmost_app() else "System Events")
+        ok = auto.run_shortcut(target, shortcut)
+        if ok:
+            return ToolResult(data=f"Sent key shortcut '{shortcut}' to {target}.")
+        return ToolResult(error=f"Failed to send shortcut '{shortcut}' to {target}.")
+
+
 class SendNotificationTool(Tool):
     """Deliver a native desktop system notification."""
 
@@ -529,6 +665,8 @@ WORKSTATION_TOOLS: list[Tool] = [
     LaunchAppTool(),
     FocusAppTool(),
     ListAppsTool(),
+    TypeTextTool(),
+    KeyShortcutTool(),
     SendNotificationTool(),
     ClipboardTool(),
     RunAppleScriptTool(),
