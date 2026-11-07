@@ -42,4 +42,5 @@ jobs:
           python tests/test_recursive_harness.py
           python tests/test_firebase_bridge.py
           python tests/test_presentation.py
+          python tests/test_revert.py
           python tests/test_lucy.py

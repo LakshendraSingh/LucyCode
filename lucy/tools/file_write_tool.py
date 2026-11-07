@@ -107,6 +107,24 @@ class FileWriteTool(Tool):
             existed = path.exists()
             old_size = path.stat().st_size if existed else 0
 
+            # Record change for undo/revert
+            try:
+                from lucy.utils.diff_preview import get_undo_manager
+                orig_content = ""
+                if existed:
+                    try:
+                        orig_content = path.read_text(encoding="utf-8", errors="replace")
+                    except Exception:
+                        orig_content = ""
+                get_undo_manager().record_change(
+                    filepath=str(path),
+                    original_content=orig_content,
+                    new_content=content,
+                    change_type="overwrite" if existed else "create",
+                )
+            except Exception:
+                pass
+
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
 

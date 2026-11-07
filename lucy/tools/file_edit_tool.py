@@ -136,6 +136,18 @@ class FileEditTool(Tool):
         # Apply the edit
         new_content = content.replace(old_text, new_text, 1)
 
+        # Record change for undo/revert
+        try:
+            from lucy.utils.diff_preview import get_undo_manager
+            get_undo_manager().record_change(
+                filepath=str(path),
+                original_content=content,
+                new_content=new_content,
+                change_type="edit",
+            )
+        except Exception:
+            pass
+
         try:
             path.write_text(new_content, encoding="utf-8")
         except OSError as e:

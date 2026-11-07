@@ -38,6 +38,7 @@ def _register_tools():
 
     # New Phase 1 tools
     from lucy.tools.ask_user_tool import AskUserQuestionTool
+    from lucy.tools.revert_tool import RevertTool
     from lucy.tools.brief_tool import BriefTool
     from lucy.tools.config_tool import ConfigTool
     from lucy.tools.plan_mode_tools import EnterPlanModeTool, ExitPlanModeTool
@@ -71,6 +72,7 @@ def _register_tools():
 
     # Register new tools
     register_tool(AskUserQuestionTool())
+    register_tool(RevertTool())
     register_tool(BriefTool())
     register_tool(ConfigTool())
     register_tool(EnterPlanModeTool())

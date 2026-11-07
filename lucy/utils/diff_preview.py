@@ -113,6 +113,15 @@ class UndoManager:
                 return change
         return None
 
+    def undo_all(self) -> list[FileChange]:
+        """Undo all recorded changes in reverse order."""
+        undone = []
+        while self._history:
+            change = self.undo_last()
+            if change:
+                undone.append(change)
+        return undone
+
     def get_history(self, limit: int = 20) -> list[FileChange]:
         return list(reversed(self._history[:limit]))
 

@@ -683,43 +683,114 @@ class UndoCommand(Command):
         return "undo"
 
     @property
+    def aliases(self) -> list[str]:
+        return ["revert", "rollback"]
+
+    @property
     def description(self) -> str:
-        return "Undo last file change"
+        return "Revert/undo file changes (/revert, /revert all, /revert <file>, /revert diff)"
+
+    @property
+    def usage(self) -> str:
+        return "/revert [all|<file>|list|diff]"
 
     async def execute(self, args: str, state: AppState) -> CommandResult:
+        import os, subprocess, time as t
         from lucy.utils.diff_preview import get_undo_manager
 
         mgr = get_undo_manager()
         args = args.strip()
 
-        if args == "list":
+        if args in ("list", "history"):
             history = mgr.get_history()
             if not history:
-                return CommandResult(output="No changes to undo.")
-            lines = ["Recent changes:\n"]
+                return CommandResult(output="No changes to undo in current session.")
+            lines = ["Recent session changes:\n"]
             for ch in history:
-                import os, time as t
                 ts = t.strftime("%H:%M:%S", t.localtime(ch.timestamp))
-                lines.append(f"  [{ts}] {ch.change_type}: {os.path.basename(ch.filepath)}")
+                lines.append(f"  [{ts}] {ch.change_type.upper()}: {os.path.basename(ch.filepath)}")
             return CommandResult(output="\n".join(lines))
 
-        if args == "preview":
+        if args in ("preview", "diff"):
             diff = mgr.preview_last()
             if not diff:
+                # Git diff fallback
+                try:
+                    proc = subprocess.run(["git", "diff"], capture_output=True, text=True, timeout=5)
+                    if proc.stdout.strip():
+                        return CommandResult(output=proc.stdout.strip())
+                except Exception:
+                    pass
                 return CommandResult(output="No changes to preview.")
             return CommandResult(output=diff)
 
-        # Undo
+        if args == "all":
+            undone = mgr.undo_all()
+            if undone:
+                files_str = ", ".join(os.path.basename(ch.filepath) for ch in undone)
+                return CommandResult(
+                    output=f"Reverted all {len(undone)} session change(s): {files_str}"
+                )
+            # Git checkout all fallback
+            try:
+                proc = subprocess.run(["git", "checkout", "."], capture_output=True, text=True, timeout=5)
+                if proc.returncode == 0:
+                    return CommandResult(output="Reverted all uncommitted working tree changes via git.")
+            except Exception:
+                pass
+            return CommandResult(output="No changes to revert.")
+
+        # Undo specific file or last
         if args:
-            change = mgr.undo_file(args)
+            target_path = args
+            change = mgr.undo_file(target_path)
+            if not change:
+                # Try basename match
+                for ch in mgr.get_history():
+                    if os.path.basename(ch.filepath) == os.path.basename(target_path):
+                        change = mgr.undo_file(ch.filepath)
+                        break
+            if not change:
+                # Git checkout file fallback
+                try:
+                    proc = subprocess.run(
+                        ["git", "checkout", "--", target_path],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                    )
+                    if proc.returncode == 0:
+                        return CommandResult(
+                            output=f"Reverted uncommitted changes on {os.path.basename(target_path)} via git."
+                        )
+                except Exception:
+                    pass
         else:
             change = mgr.undo_last()
 
         if change:
-            import os
             return CommandResult(
                 output=f"Undone {change.change_type} on {os.path.basename(change.filepath)}"
             )
+
+        # Git checkout last modified file fallback
+        try:
+            proc = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            lines = [l.strip() for l in proc.stdout.splitlines() if l.strip()]
+            if lines:
+                last_file = lines[-1].split()[-1]
+                subprocess.run(["git", "checkout", "--", last_file], capture_output=True, timeout=5)
+                return CommandResult(
+                    output=f"Reverted uncommitted changes on {os.path.basename(last_file)} via git."
+                )
+        except Exception:
+            pass
+
         return CommandResult(output="Nothing to undo.")
 
 

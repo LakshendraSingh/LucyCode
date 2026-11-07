@@ -450,7 +450,7 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
 
 | Category         | Tools                                                                                                                                                                                                             |
 | :--------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Filesystem**   | `read`, `write`, `edit`, `grep`, `glob`, `tree`, `binary_check`, `undo`                                                                                                                                           |
+| **Filesystem**   | `read`, `write`, `edit`, `revert_change`, `grep`, `glob`, `tree`, `binary_check`, `undo`                                                                                                                         |
 | **System**       | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox`                                                                                                                                               |
 | **Workstation**  | `ui_inspect`, `ui_click`, `ui_menu`, `ui_type`, `ui_verify`, `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `type_text`, `key_shortcut`, `notify`, `clipboard`, `applescript`, `browser`, `email`, `workflow`, `speak`, `screen_info`, `presentation` |
 | **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval`                                                                                                                                               |
@@ -470,7 +470,7 @@ Type `/` in the interactive REPL to trigger system commands:
 | `/model`    | Switch model/provider on the fly       | `/plan`         | Create or view execution plan            |
 | `/cost`     | Token usage & cost analytics           | `/status`       | System health & usage stats              |
 | `/doctor`   | Run comprehensive system diagnostics   | `/memory`       | Semantic memory inspection               |
-| `/mcp`      | Inspect & manage MCP servers           | `/undo`         | Revert last file modification            |
+| `/mcp`      | Inspect & manage MCP servers           | `/revert`       | Revert / undo changes (`/revert all`)    |
 | `/dream`    | Proactive background codebase indexing | `/tasks`        | View running background tasks            |
 | `/sessions` | Save, list, or resume chat sessions    | `/voice`        | Toggle voice transcription               |
 | `/harness`  | LLM evaluation & benchmark suite       | `/harness2`     | Harness² recursive self-improvement      |
