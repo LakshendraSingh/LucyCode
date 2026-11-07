@@ -243,6 +243,66 @@ class TestPresentation(unittest.TestCase):
         active_names = [s.metadata.name for s in active]
         self.assertIn("presentation-design", active_names)
 
+    def test_image_slide_and_visual_generator(self):
+        """Test image slide generation with local file, visual fallback, and spec parsing."""
+        from PIL import Image, ImageDraw
+
+        # Create a test local image
+        img_path = Path(self.temp_dir) / "sample_graphic.png"
+        img = Image.new("RGB", (600, 400), color=(15, 23, 42))
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([10, 10, 590, 390], outline=(99, 102, 241), width=4)
+        img.save(str(img_path))
+
+        out_path = Path(self.temp_dir) / "image_deck.pptx"
+        spec = {
+            "theme": "modern_dark",
+            "output_path": str(out_path),
+            "slides": [
+                {
+                    "type": "title",
+                    "title": "Amazon Cloud & Systems",
+                    "subtitle": "Global Infrastructure",
+                    "image_path": str(img_path),
+                },
+                {
+                    "type": "image",
+                    "title": "AWS Cloud Architecture",
+                    "subtitle": "Availability Zones & Edge Locations",
+                    "tag": "CLOUD",
+                    "image_path": str(img_path),
+                    "caption": "Figure 1: Global multi-region backbone network",
+                    "points": [
+                        "33 geographic regions with 105 availability zones",
+                        "Sub-millisecond fiber optic interconnects",
+                        "Fully managed serverless compute & storage",
+                    ],
+                },
+                {
+                    "type": "image",
+                    "title": "Fulfillment Robotics",
+                    "subtitle": "Kiva autonomous mobile robots",
+                    "tag": "ROBOTICS",
+                    # No image_path -> triggers dynamic theme-matched PIL infographic generator
+                    "caption": "Figure 2: Autonomous logistics warehouse pods",
+                },
+            ],
+        }
+
+        saved_file = generate_presentation_from_spec(spec)
+        self.assertTrue(Path(saved_file).exists())
+        prs = pptx.Presentation(saved_file)
+        self.assertEqual(len(prs.slides), 3)
+
+        # Verify pictures exist on the slides
+        has_pictures = False
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if shape.shape_type == pptx.enum.shapes.MSO_SHAPE_TYPE.PICTURE:
+                    has_pictures = True
+                    break
+        self.assertTrue(has_pictures)
+
 
 if __name__ == "__main__":
     unittest.main()

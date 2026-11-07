@@ -176,3 +176,4 @@ class RevertTool(Tool):
             pass
 
         return ToolResult(data="No changes to revert.")
+

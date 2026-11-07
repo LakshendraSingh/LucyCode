@@ -8,7 +8,11 @@ and executive-grade aesthetic polish.
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import os
+import tempfile
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -114,6 +118,186 @@ THEMES: dict[str, PresentationTheme] = {
         tag_text=(221, 214, 254),       # #DDD6FE light violet
     ),
 }
+
+
+# ---------------------------------------------------------------------------
+# Image Resolution & Dynamic Visual Generator
+# ---------------------------------------------------------------------------
+
+def _resolve_or_generate_image(
+    image_path: str = "",
+    image_url: str = "",
+    title: str = "",
+    tag: str = "",
+    theme: PresentationTheme | None = None,
+) -> str | None:
+    """
+    Resolve an image from a local path or remote URL.
+    If the image cannot be downloaded or found, dynamically generates a high-quality
+    visual graphic asset with PIL matching the presentation theme.
+    """
+    # 1. Try Remote URL Download
+    target_url = (image_url or "").strip()
+    if not target_url and image_path and image_path.startswith(("http://", "https://")):
+        target_url = image_path.strip()
+
+    if target_url.startswith(("http://", "https://")):
+        try:
+            cache_dir = Path(tempfile.gettempdir()) / "lucy_images"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            url_hash = hashlib.md5(target_url.encode("utf-8")).hexdigest()[:12]
+            ext = ".png"
+            if ".jpg" in target_url.lower() or ".jpeg" in target_url.lower():
+                ext = ".jpg"
+            cached_file = cache_dir / f"img_{url_hash}{ext}"
+            if cached_file.exists() and cached_file.stat().st_size > 500:
+                return str(cached_file)
+
+            req = urllib.request.Request(
+                target_url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                },
+            )
+            with urllib.request.urlopen(req, timeout=8) as response:
+                content = response.read()
+                if len(content) > 200:
+                    cached_file.write_bytes(content)
+                    try:
+                        from PIL import Image
+                        with Image.open(cached_file) as img:
+                            img.verify()
+                        return str(cached_file)
+                    except Exception:
+                        if cached_file.exists():
+                            cached_file.unlink(missing_ok=True)
+        except Exception as e:
+            logger.debug("Failed to download image %s: %s", target_url, e)
+
+    # 2. Try Local File Path
+    if image_path and not image_path.startswith(("http://", "https://")):
+        try:
+            p = Path(image_path).expanduser()
+            if not p.is_absolute():
+                p = Path.cwd() / p
+            if p.exists() and p.is_file():
+                return str(p.resolve())
+        except Exception as e:
+            logger.debug("Local file lookup failed for %s: %s", image_path, e)
+
+    # 3. Dynamic High-Quality Visual Generator via PIL (Theme-matched fallback)
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+
+        cache_dir = Path(tempfile.gettempdir()) / "lucy_images"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        theme_name = theme.name if theme else "default"
+        fallback_hash = hashlib.md5(
+            f"{title}_{tag}_{theme_name}".encode("utf-8")
+        ).hexdigest()[:10]
+        generated_path = cache_dir / f"visual_{fallback_hash}.png"
+        if generated_path.exists() and generated_path.stat().st_size > 1000:
+            return str(generated_path)
+
+        w, h = 1200, 800
+        bg_col = theme.card_bg if theme else (30, 41, 59)
+        accent_col = theme.accent if theme else (99, 102, 241)
+        accent_sec = theme.accent_secondary if theme else (6, 182, 212)
+        text_col = theme.primary_text if theme else (248, 250, 252)
+        sub_col = theme.secondary_text if theme else (148, 163, 184)
+        border_col = theme.card_border if theme else (51, 65, 85)
+
+        img = Image.new("RGB", (w, h), color=bg_col)
+        draw = ImageDraw.Draw(img)
+
+        # Sleek outer border with rounded corners
+        draw.rounded_rectangle([15, 15, w - 15, h - 15], radius=24, outline=border_col, width=3)
+
+        # Subtle geometric decorative background accents
+        draw.arc([w - 320, -100, w + 100, 320], start=0, end=360, fill=border_col, width=2)
+        draw.arc([w - 260, -40, w + 40, 260], start=0, end=360, fill=accent_col, width=3)
+        draw.line([60, 180, 260, 180], fill=accent_col, width=4)
+
+        # Category tag pill
+        display_tag = (tag or "VISUAL FOCUS").upper()
+        tag_width = max(len(display_tag) * 16 + 40, 180)
+        draw.rounded_rectangle([60, 70, 60 + tag_width, 125], radius=14, fill=accent_col)
+
+        # System fonts lookup
+        title_font = None
+        body_font = None
+        tag_font = None
+        for fp in [
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/Library/Fonts/Arial.ttf",
+        ]:
+            if os.path.exists(fp):
+                try:
+                    title_font = ImageFont.truetype(fp, 46)
+                    body_font = ImageFont.truetype(fp, 26)
+                    tag_font = ImageFont.truetype(fp, 20)
+                    break
+                except Exception:
+                    pass
+        if not title_font:
+            title_font = ImageFont.load_default()
+            body_font = ImageFont.load_default()
+            tag_font = ImageFont.load_default()
+
+        draw.text((80, 86), display_tag, fill=(255, 255, 255), font=tag_font)
+
+        # Main graphic title wrapping
+        display_title = title or "Visual Architecture"
+        words = display_title.split()
+        lines = []
+        curr: list[str] = []
+        for wd in words:
+            curr.append(wd)
+            if len(" ".join(curr)) > 26:
+                lines.append(" ".join(curr[:-1]))
+                curr = [wd]
+        if curr:
+            lines.append(" ".join(curr))
+
+        y_text = 220
+        for line in lines[:3]:
+            draw.text((60, y_text), line, fill=text_col, font=title_font)
+            y_text += 60
+
+        # Decorative accent KPI cards inside the graphic
+        y_cards = max(y_text + 40, 480)
+        cw = 320
+        ch = 180
+        for ci in range(3):
+            cx = 60 + ci * (cw + 40)
+            if cx + cw < w - 40:
+                draw.rounded_rectangle(
+                    [cx, y_cards, cx + cw, y_cards + ch],
+                    radius=16,
+                    fill=border_col,
+                    outline=accent_sec,
+                    width=2,
+                )
+                draw.rectangle([cx + 20, y_cards + 25, cx + 60, y_cards + 30], fill=accent_sec)
+                draw.text(
+                    (cx + 20, y_cards + 45),
+                    f"Architecture 0{ci+1}",
+                    fill=text_col,
+                    font=body_font,
+                )
+                draw.text(
+                    (cx + 20, y_cards + 90),
+                    "High-Throughput Node",
+                    fill=sub_col,
+                    font=tag_font,
+                )
+
+        img.save(str(generated_path), format="PNG")
+        return str(generated_path)
+    except Exception as e:
+        logger.warning("Could not generate fallback visual image: %s", e)
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -236,10 +420,22 @@ class SlideDeck:
         presenter: str = "",
         date: str = "",
         tag: str = "PRESENTATION",
+        image_path: str = "",
+        image_url: str = "",
     ) -> None:
         """Create a high-impact title / cover slide."""
         slide = self.prs.slides.add_slide(self.blank_layout)
         self._set_slide_bg(slide)
+
+        resolved_img = None
+        if image_path or image_url:
+            resolved_img = _resolve_or_generate_image(
+                image_path=image_path,
+                image_url=image_url,
+                title=title,
+                tag=tag,
+                theme=self.theme,
+            )
 
         # Decorative left accent stripe
         stripe = slide.shapes.add_shape(
@@ -273,9 +469,12 @@ class SlideDeck:
             p_tag.font.color.rgb = self._rgb(self.theme.tag_text)
             p_tag.alignment = PP_ALIGN.CENTER
 
+        # Width adjustment if title has right-hand visual/hero image
+        text_width = 7.2 if resolved_img else 11.0
+
         # Title
         title_box = slide.shapes.add_textbox(
-            Inches(1.1), Inches(2.35), Inches(11.0), Inches(1.6)
+            Inches(1.1), Inches(2.35), Inches(text_width), Inches(1.6)
         )
         tf_title = title_box.text_frame
         tf_title.word_wrap = True
@@ -290,7 +489,7 @@ class SlideDeck:
         # Subtitle
         if subtitle:
             sub_box = slide.shapes.add_textbox(
-                Inches(1.1), Inches(4.1), Inches(10.5), Inches(0.8)
+                Inches(1.1), Inches(4.1), Inches(text_width), Inches(0.8)
             )
             tf_sub = sub_box.text_frame
             tf_sub.word_wrap = True
@@ -301,6 +500,18 @@ class SlideDeck:
             p_sub.font.size = Pt(17)
             p_sub.font.color.rgb = self._rgb(self.theme.secondary_text)
 
+        # Hero Image on right side if provided
+        if resolved_img and Path(resolved_img).exists():
+            try:
+                slide.shapes.add_picture(
+                    resolved_img,
+                    Inches(8.5),
+                    Inches(1.8),
+                    width=Inches(4.0),
+                )
+            except Exception as e:
+                logger.debug("Failed adding picture to title slide: %s", e)
+
         # Presenter & Date metadata footer
         meta_parts = []
         if presenter:
@@ -309,7 +520,7 @@ class SlideDeck:
             meta_parts.append(date)
         if meta_parts:
             meta_box = slide.shapes.add_textbox(
-                Inches(1.1), Inches(5.6), Inches(10.5), Inches(0.4)
+                Inches(1.1), Inches(5.6), Inches(text_width), Inches(0.4)
             )
             tf_meta = meta_box.text_frame
             p_meta = tf_meta.paragraphs[0]
@@ -802,6 +1013,209 @@ class SlideDeck:
             p.font.color.rgb = self._rgb(self.theme.primary_text)
             p.space_after = Pt(8)
 
+    def add_image_slide(
+        self,
+        title: str,
+        subtitle: str = "",
+        image_path: str = "",
+        image_url: str = "",
+        caption: str = "",
+        points: list[str] | None = None,
+        tag: str = "VISUAL",
+    ) -> None:
+        """
+        Add a dedicated visual / image slide.
+        If `points` are provided, renders a split two-column layout:
+          - Left column: The visual image inside a curated card frame with caption
+          - Right column: Explanatory highlights, analysis bullets, and insights
+        If no `points` are provided, renders a spacious, centered showcase layout.
+        """
+        points = points or []
+        slide = self.prs.slides.add_slide(self.blank_layout)
+        self._set_slide_bg(slide)
+
+        header_bottom = self._add_header(slide, title, subtitle, tag)
+        content_top = max(header_bottom + 0.25, 1.9)
+        content_height = 4.8
+
+        resolved_img = _resolve_or_generate_image(
+            image_path=image_path,
+            image_url=image_url,
+            title=title,
+            tag=tag,
+            theme=self.theme,
+        )
+
+        if points:
+            # Two-column layout
+            margin_left = 0.8
+            img_col_width = 5.8
+            gap = 0.4
+            text_col_width = 13.333 - margin_left * 2 - img_col_width - gap
+
+            # 1. Left Image Container Card
+            img_card = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(margin_left),
+                Inches(content_top),
+                Inches(img_col_width),
+                Inches(content_height),
+            )
+            img_card.fill.solid()
+            img_card.fill.fore_color.rgb = self._rgb(self.theme.card_bg)
+            img_card.line.color.rgb = self._rgb(self.theme.card_border)
+            img_card.line.width = Pt(1.2)
+
+            if resolved_img and Path(resolved_img).exists():
+                max_w = 5.2
+                max_h = 3.6 if caption else 4.1
+                try:
+                    from PIL import Image
+
+                    with Image.open(resolved_img) as pil_img:
+                        iw, ih = pil_img.size
+                    ratio = iw / ih if ih else 1.0
+                    if ratio >= (max_w / max_h):
+                        render_w = max_w
+                        render_h = max_w / ratio
+                    else:
+                        render_h = max_h
+                        render_w = max_h * ratio
+                except Exception:
+                    render_w = max_w
+                    render_h = max_h
+
+                pic_left = margin_left + 0.3 + (max_w - render_w) / 2
+                pic_top = content_top + 0.3 + (max_h - render_h) / 2
+                try:
+                    slide.shapes.add_picture(
+                        resolved_img,
+                        Inches(pic_left),
+                        Inches(pic_top),
+                        width=Inches(render_w),
+                        height=Inches(render_h),
+                    )
+                except Exception as e:
+                    logger.debug("Failed adding picture to image slide: %s", e)
+
+            # Caption below image if present
+            if caption:
+                cap_box = slide.shapes.add_textbox(
+                    Inches(margin_left + 0.3),
+                    Inches(content_top + 4.1),
+                    Inches(img_col_width - 0.6),
+                    Inches(0.5),
+                )
+                tf_cap = cap_box.text_frame
+                tf_cap.word_wrap = True
+                p_cap = tf_cap.paragraphs[0]
+                p_cap.text = caption
+                p_cap.font.name = self.theme.font_body
+                p_cap.font.size = Pt(11)
+                p_cap.font.italic = True
+                p_cap.font.color.rgb = self._rgb(self.theme.secondary_text)
+                p_cap.alignment = PP_ALIGN.CENTER
+
+            # 2. Right Text/Bullets Card
+            text_x = margin_left + img_col_width + gap
+            text_card = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(text_x),
+                Inches(content_top),
+                Inches(text_col_width),
+                Inches(content_height),
+            )
+            text_card.fill.solid()
+            text_card.fill.fore_color.rgb = self._rgb(self.theme.card_bg)
+            text_card.line.color.rgb = self._rgb(self.theme.card_border)
+            text_card.line.width = Pt(1.2)
+
+            tf_text = text_card.text_frame
+            tf_text.word_wrap = True
+            tf_text.margin_left = Inches(0.4)
+            tf_text.margin_right = Inches(0.4)
+            tf_text.margin_top = Inches(0.4)
+
+            p_head = tf_text.paragraphs[0]
+            p_head.text = "Key Insights & Architecture"
+            p_head.font.name = self.theme.font_title
+            p_head.font.size = Pt(20)
+            p_head.font.bold = True
+            p_head.font.color.rgb = self._rgb(self.theme.accent)
+            p_head.space_after = Pt(16)
+
+            for pt in points:
+                p_pt = tf_text.add_paragraph()
+                p_pt.text = f"•  {pt}"
+                p_pt.font.name = self.theme.font_body
+                p_pt.font.size = Pt(13)
+                p_pt.font.color.rgb = self._rgb(self.theme.primary_text)
+                p_pt.space_after = Pt(10)
+        else:
+            # Showcase Layout (Spacious Centered Frame)
+            frame_width = 10.6
+            frame_left = (13.333 - frame_width) / 2
+            card = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(frame_left),
+                Inches(content_top),
+                Inches(frame_width),
+                Inches(content_height),
+            )
+            card.fill.solid()
+            card.fill.fore_color.rgb = self._rgb(self.theme.card_bg)
+            card.line.color.rgb = self._rgb(self.theme.card_border)
+            card.line.width = Pt(1.2)
+
+            if resolved_img and Path(resolved_img).exists():
+                max_w = 9.8
+                max_h = 3.8 if caption else 4.2
+                try:
+                    from PIL import Image
+
+                    with Image.open(resolved_img) as pil_img:
+                        iw, ih = pil_img.size
+                    ratio = iw / ih if ih else 1.0
+                    if ratio >= (max_w / max_h):
+                        render_w = max_w
+                        render_h = max_w / ratio
+                    else:
+                        render_h = max_h
+                        render_w = max_h * ratio
+                except Exception:
+                    render_w = max_w
+                    render_h = max_h
+
+                pic_left = frame_left + (frame_width - render_w) / 2
+                pic_top = content_top + 0.3 + (max_h - render_h) / 2
+                try:
+                    slide.shapes.add_picture(
+                        resolved_img,
+                        Inches(pic_left),
+                        Inches(pic_top),
+                        width=Inches(render_w),
+                        height=Inches(render_h),
+                    )
+                except Exception as e:
+                    logger.debug("Failed adding picture to showcase slide: %s", e)
+
+            if caption:
+                cap_box = slide.shapes.add_textbox(
+                    Inches(frame_left + 0.4),
+                    Inches(content_top + 4.2),
+                    Inches(frame_width - 0.8),
+                    Inches(0.4),
+                )
+                tf_cap = cap_box.text_frame
+                tf_cap.word_wrap = True
+                p_cap = tf_cap.paragraphs[0]
+                p_cap.text = caption
+                p_cap.font.name = self.theme.font_body
+                p_cap.font.size = Pt(12)
+                p_cap.font.italic = True
+                p_cap.font.color.rgb = self._rgb(self.theme.secondary_text)
+                p_cap.alignment = PP_ALIGN.CENTER
+
     # -----------------------------------------------------------------------
     # Output & Persistence
     # -----------------------------------------------------------------------
@@ -891,6 +1305,18 @@ def generate_presentation_from_spec(spec: dict[str, Any]) -> str:
                 presenter=slide_data.get("presenter", ""),
                 date=slide_data.get("date", ""),
                 tag=tag or "PRESENTATION",
+                image_path=slide_data.get("image_path", ""),
+                image_url=slide_data.get("image_url", ""),
+            )
+        elif stype in ("image", "visual", "graphic"):
+            deck.add_image_slide(
+                title=title,
+                subtitle=subtitle,
+                image_path=slide_data.get("image_path", ""),
+                image_url=slide_data.get("image_url", ""),
+                caption=slide_data.get("caption", ""),
+                points=slide_data.get("points") or slide_data.get("bullets", []),
+                tag=tag or "VISUAL",
             )
         elif stype == "cards":
             deck.add_card_slide(

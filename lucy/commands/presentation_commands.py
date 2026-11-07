@@ -110,6 +110,9 @@ class PresentationCommand(Command):
                 "",
                 "7. Summary & Next Steps",
                 "   Two-column split: Key Takeaways with checkmarks on left, Action Roadmap on right.",
+                "",
+                "8. Visual Showcase & Image Slide",
+                "   Left-hand graphic/image frame with right-hand analysis bullets, or spacious centered visual.",
             ]
             return CommandResult(output="\n".join(lines))
 

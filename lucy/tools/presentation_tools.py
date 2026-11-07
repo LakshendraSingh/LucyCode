@@ -57,17 +57,21 @@ class PresentationTool(Tool):
                 },
                 "slides": {
                     "type": "array",
-                    "description": "List of slide specifications (types: 'title', 'cards', 'metrics', 'process', 'comparison', 'quote', 'summary').",
+                    "description": "List of slide specifications (types: 'title', 'cards', 'metrics', 'process', 'comparison', 'quote', 'summary', 'image', 'visual').",
                     "items": {
                         "type": "object",
                         "properties": {
                             "type": {
                                 "type": "string",
-                                "enum": ["title", "cards", "metrics", "process", "comparison", "quote", "summary"],
+                                "enum": ["title", "cards", "metrics", "process", "comparison", "quote", "summary", "image", "visual"],
                             },
                             "title": {"type": "string"},
                             "subtitle": {"type": "string"},
                             "tag": {"type": "string"},
+                            "image_path": {"type": "string"},
+                            "image_url": {"type": "string"},
+                            "caption": {"type": "string"},
+                            "points": {"type": "array", "items": {"type": "string"}},
                             "cards": {"type": "array", "items": {"type": "object"}},
                             "metrics": {"type": "array", "items": {"type": "object"}},
                             "steps": {"type": "array", "items": {"type": "object"}},
@@ -155,6 +159,18 @@ class PresentationTool(Tool):
                         "metrics": [
                             {"value": "99.9%", "label": "Uptime", "detail": "High availability SLA"},
                             {"value": "10x", "label": "Speed", "detail": "End-to-end task throughput"},
+                        ],
+                    },
+                    {
+                        "type": "image",
+                        "title": "System Architecture & Flow",
+                        "subtitle": "End-to-end component interaction",
+                        "tag": "ARCHITECTURE",
+                        "caption": "Figure 1.1: Distributed agentic execution pipeline",
+                        "points": [
+                            "Isolated execution sandboxes",
+                            "Real-time DOM inspection",
+                            "Continuous visual verification",
                         ],
                     },
                     {

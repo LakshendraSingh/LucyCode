@@ -51,6 +51,8 @@ LucyCode incorporates an executive presentation generation engine that creates m
    - Oversized stylized quotation mark, italicized high-conviction quote, and author name/role attribution.
 7. **Summary & Roadmap**:
    - Two-column split: Key Takeaways with checkmarks on the left, Next Steps / Action Items on the right.
+8. **Visual Showcase & Image Slide**:
+   - Split layout with visual asset / diagram card on the left and analytical bullets on the right, or expansive centered showcase for high-impact architecture diagrams and product visuals. Supports local image paths, remote URLs, or dynamic theme-matched visual infographics.
 
 ## 3. How to Create Presentations
 

@@ -624,7 +624,6 @@ async def _run_print(
     if ndjson:
         from lucy.api.ndjson_emitter import NDJSONEmitter
         # Suppress arbitrary stdout print statements so json is clean
-        import sys
         
         async for event in query_loop(params):
             if isinstance(event, StreamEvent):
