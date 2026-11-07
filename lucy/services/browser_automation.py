@@ -110,8 +110,8 @@ class BrowserAutomationService:
                 return False
         return True
 
-    async def open_url(self, url: str, new_tab: bool = False) -> BrowserResult:
-        """Open web URL in active browser or system default."""
+    async def open_url(self, url: str, new_tab: bool = False, browser_name: str | None = None) -> BrowserResult:
+        """Open web URL in active browser, specific browser, or system default."""
         if not url.startswith(("http://", "https://", "file://")):
             url = f"https://{url}"
 
@@ -125,12 +125,16 @@ class BrowserAutomationService:
             except Exception as e:
                 return BrowserResult(success=False, output="", error=f"Playwright navigation failed: {e}")
 
-        # Native macOS fallback
+        # Native macOS browser open fallback
         try:
-            cmd = ["open", url]
+            if browser_name:
+                cmd = ["open", "-a", browser_name, url]
+            else:
+                cmd = ["open", url]
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             if proc.returncode == 0:
-                return BrowserResult(success=True, output=f"Opened {url} in default workstation browser.")
+                bname = browser_name or "default workstation"
+                return BrowserResult(success=True, output=f"Opened {url} in {bname} browser.")
             return BrowserResult(success=False, output="", error=proc.stderr)
         except Exception as e:
             return BrowserResult(success=False, output="", error=str(e))
@@ -185,13 +189,25 @@ class BrowserAutomationService:
         if self._backend == BrowserBackend.PLAYWRIGHT and self._active_page:
             return self._active_page.url
 
-        # AppleScript fallback for active Chrome tab
+        # AppleScript query for active tab in Safari or Chrome
         ascript = """
-        tell application "Google Chrome"
-            if (count of windows) > 0 then
-                return URL of active tab of front window
-            end if
+        tell application "System Events"
+            set isSafari to (name of processes) contains "Safari"
+            set isChrome to (name of processes) contains "Google Chrome"
         end tell
+        if isSafari then
+            tell application "Safari"
+                if (count of windows) > 0 then
+                    return URL of front document
+                end if
+            end tell
+        else if isChrome then
+            tell application "Google Chrome"
+                if (count of windows) > 0 then
+                    return URL of active tab of front window
+                end if
+            end tell
+        end if
         return ""
         """
         try:
@@ -263,7 +279,13 @@ class BrowserAutomationService:
                 return BrowserResult(success=True, output=f"Clicked element: {selector}")
             except Exception as e:
                 return BrowserResult(success=False, output="", error=str(e))
-        return BrowserResult(success=False, output="", error="Playwright required for DOM click.")
+
+        # Native DOM click fallback for Safari and Chrome via AppleScript evaluate_js
+        js_code = f"(() => {{ const el = document.querySelector('{selector}'); if (el) {{ el.click(); return 'OK'; }} return 'NOT_FOUND'; }})()"
+        res = await self.evaluate_js(js_code)
+        if res == "OK":
+            return BrowserResult(success=True, output=f"Clicked element: {selector}")
+        return BrowserResult(success=False, output="", error=f"Could not click '{selector}': {res}")
 
     async def type_text(self, selector: str, text: str, clear_first: bool = True) -> BrowserResult:
         """Input text into form element."""
@@ -276,7 +298,14 @@ class BrowserAutomationService:
                 return BrowserResult(success=True, output=f"Typed text into {selector}")
             except Exception as e:
                 return BrowserResult(success=False, output="", error=str(e))
-        return BrowserResult(success=False, output="", error="Playwright required for DOM type.")
+
+        # Native DOM input fallback for Safari and Chrome via AppleScript evaluate_js
+        escaped_val = text.replace('\\', '\\\\').replace('"', '\\"')
+        js_code = f"(() => {{ const el = document.querySelector('{selector}'); if (el) {{ el.focus(); el.value = '{escaped_val}'; el.dispatchEvent(new Event('input', {{bubbles: true}})); el.dispatchEvent(new Event('change', {{bubbles: true}})); return 'OK'; }} return 'NOT_FOUND'; }})()"
+        res = await self.evaluate_js(js_code)
+        if res == "OK":
+            return BrowserResult(success=True, output=f"Typed text into {selector}")
+        return BrowserResult(success=False, output="", error=f"Could not type into '{selector}': {res}")
 
     async def scroll(self, x: int = 0, y: int = 500) -> BrowserResult:
         """Scroll viewport."""
@@ -316,18 +345,30 @@ class BrowserAutomationService:
         return b64
 
     async def evaluate_js(self, script: str) -> Any:
-        """Run JavaScript in active page context."""
+        """Run JavaScript in active page context in Safari or Chrome."""
         if self._backend == BrowserBackend.PLAYWRIGHT and self._active_page:
             return await self._active_page.evaluate(script)
 
-        # AppleScript JS injection into Chrome
+        # AppleScript JS injection into Safari or Chrome
         escaped_script = script.replace('"', '\\"')
         ascript = f"""
-        tell application "Google Chrome"
-            if (count of windows) > 0 then
-                return execute active tab of front window javascript "{escaped_script}"
-            end if
+        tell application "System Events"
+            set isSafari to (name of processes) contains "Safari"
+            set isChrome to (name of processes) contains "Google Chrome"
         end tell
+        if isSafari then
+            tell application "Safari"
+                if (count of windows) > 0 then
+                    return do JavaScript "{escaped_script}" in current tab of front window
+                end if
+            end tell
+        else if isChrome then
+            tell application "Google Chrome"
+                if (count of windows) > 0 then
+                    return execute active tab of front window javascript "{escaped_script}"
+                end if
+            end tell
+        end if
         return ""
         """
         try:

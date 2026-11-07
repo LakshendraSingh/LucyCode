@@ -472,6 +472,7 @@ class BrowserTool(Tool):
                     "description": "Browser action to execute",
                 },
                 "url": {"type": "string", "description": "URL to navigate when action is 'open'"},
+                "browser": {"type": "string", "description": "Specific browser application to target (e.g. 'Safari', 'Google Chrome')"},
                 "selector": {"type": "string", "description": "CSS selector for click/type"},
                 "text": {"type": "string", "description": "Text to type"},
                 "script": {"type": "string", "description": "JavaScript code when action is 'js'"},
@@ -492,7 +493,7 @@ class BrowserTool(Tool):
         action = tool_input.get("action")
 
         if action == "open":
-            res = await b.open_url(tool_input.get("url", ""))
+            res = await b.open_url(tool_input.get("url", ""), browser_name=tool_input.get("browser"))
             return ToolResult(data=res.output) if res.success else ToolResult(error=res.error)
         elif action == "search":
             res = await b.search_web_and_read(tool_input.get("query", ""))
@@ -519,6 +520,84 @@ class BrowserTool(Tool):
             out = await b.evaluate_js(tool_input.get("script", ""))
             return ToolResult(data=f"JavaScript evaluation result: {out}")
         return ToolResult(error=f"Unknown browser action '{action}'")
+
+
+class EmailTool(Tool):
+    """Draft, compose, and send emails via Gmail (in Safari/Chrome), Apple Mail, or default client."""
+
+    @property
+    def name(self) -> str:
+        return "email"
+
+    @property
+    def description(self) -> str:
+        return (
+            "Compose, draft, and send emails directly. For Gmail, automatically generates and opens the pre-filled "
+            "compose window in Safari or Chrome, and optionally dispatches the email automatically via Send shortcut."
+        )
+
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Recipient email address (e.g. 'laksh28kit@gmail.com')"},
+                "subject": {"type": "string", "description": "Email subject line", "default": ""},
+                "body": {"type": "string", "description": "Email message body", "default": ""},
+                "browser": {"type": "string", "default": "Safari", "description": "Browser to open for Gmail (e.g. 'Safari', 'Google Chrome')"},
+                "send": {"type": "boolean", "default": True, "description": "Whether to automatically send the email after opening the compose window"},
+            },
+            "required": ["to"],
+        }
+
+    def get_prompt(self) -> str:
+        return "Compose and send emails to recipients."
+
+    async def call(self, tool_input: dict[str, Any], context: ToolContext) -> ToolResult:
+        import urllib.parse
+        from lucy.services.app_automation import get_app_automation
+        from lucy.services.browser_automation import get_browser_automation
+
+        to_addr = tool_input.get("to", "").strip()
+        subject = tool_input.get("subject", "").strip()
+        body = tool_input.get("body", "").strip()
+        browser_name = tool_input.get("browser", "Safari")
+        auto_send = tool_input.get("send", True)
+
+        if not to_addr:
+            return ToolResult(error="Recipient 'to' email address is required.")
+
+        # Construct official direct Gmail compose URL with pre-filled fields
+        enc_to = urllib.parse.quote(to_addr)
+        enc_su = urllib.parse.quote(subject)
+        enc_body = urllib.parse.quote(body)
+        gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={enc_to}&su={enc_su}&body={enc_body}"
+
+        # Open in requested browser
+        target_browser = "Safari" if "safari" in browser_name.lower() else ("Google Chrome" if "chrome" in browser_name.lower() else browser_name)
+        b = get_browser_automation()
+        auto = get_app_automation()
+
+        res = await b.open_url(gmail_url, browser_name=target_browser)
+        if not res.success:
+            return ToolResult(error=f"Could not open Gmail in {target_browser}: {res.error}")
+
+        if auto_send:
+            # Wait for Gmail webmail compose DOM to load and gain focus
+            await asyncio.sleep(4.0)
+            # Send Cmd+Enter (the universal Gmail send shortcut)
+            send_script = f"""
+            tell application "{target_browser}" to activate
+            tell application "System Events"
+                tell process "{target_browser}"
+                    keystroke return using {{command down}}
+                end tell
+            end tell
+            """
+            auto.run_applescript(send_script)
+            return ToolResult(data=f"Successfully opened pre-filled Gmail compose in {target_browser} and sent email to '{to_addr}' with subject '{subject}'.")
+
+        return ToolResult(data=f"Opened pre-filled Gmail compose window in {target_browser} addressed to '{to_addr}'.")
 
 
 class WorkflowTool(Tool):
@@ -671,6 +750,7 @@ WORKSTATION_TOOLS: list[Tool] = [
     ClipboardTool(),
     RunAppleScriptTool(),
     BrowserTool(),
+    EmailTool(),
     WorkflowTool(),
     SpeakTool(),
     GetScreenInfoTool(),

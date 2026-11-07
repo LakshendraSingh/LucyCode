@@ -160,12 +160,12 @@ class TestWorkstationAutomation(unittest.TestCase):
 
     def test_workstation_tools_registered(self) -> None:
         """Verify all workstation tools conform to Tool interface."""
-        self.assertEqual(len(WORKSTATION_TOOLS), 14)
+        self.assertEqual(len(WORKSTATION_TOOLS), 15)
         names = [t.name for t in WORKSTATION_TOOLS]
         expected = [
             "screenshot", "find_on_screen", "launch_app", "focus_app",
             "list_apps", "type_text", "key_shortcut", "notify", "clipboard",
-            "applescript", "browser", "workflow", "speak", "screen_info",
+            "applescript", "browser", "email", "workflow", "speak", "screen_info",
         ]
         for exp in expected:
             self.assertIn(exp, names)
