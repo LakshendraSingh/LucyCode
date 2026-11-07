@@ -321,10 +321,11 @@ class BrowserAutomationService:
             return await self._active_page.evaluate(script)
 
         # AppleScript JS injection into Chrome
+        escaped_script = script.replace('"', '\\"')
         ascript = f"""
         tell application "Google Chrome"
             if (count of windows) > 0 then
-                return execute active tab of front window javascript "{script.replace('"', '\\"')}"
+                return execute active tab of front window javascript "{escaped_script}"
             end if
         end tell
         return ""

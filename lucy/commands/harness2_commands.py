@@ -140,3 +140,4 @@ def get_commands() -> list[Command]:
 
 def register():
     register_command(Harness2Command())
+

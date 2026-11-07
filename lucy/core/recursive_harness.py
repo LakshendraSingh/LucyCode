@@ -547,3 +547,4 @@ def get_harness2() -> Harness2Engine:
     if _HARNESS2_INSTANCE is None:
         _HARNESS2_INSTANCE = Harness2Engine()
     return _HARNESS2_INSTANCE
+
