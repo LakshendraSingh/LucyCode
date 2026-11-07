@@ -40,6 +40,8 @@ logs/
 spec.json
 result.json
 tmp*/
+*.pptx
+~$*
 
 # IDEs
 .vscode/
