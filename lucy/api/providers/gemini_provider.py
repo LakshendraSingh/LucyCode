@@ -47,15 +47,15 @@ class GeminiProvider(LLMProvider):
         else:
             model_name = model
         # Map internal/alias models to current public Gemini API models
-        if model_name in ("gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini"):
-            return "gemini-2.5-flash"
-        if model_name in ("gemini-pro-latest", "gemini-pro"):
-            return "gemini-2.5-pro"
+        if model_name in ("gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini", "gemini-2.5-flash", "gemini-2.0-flash"):
+            return "gemini-3.8-flash"
+        if model_name in ("gemini-pro-latest", "gemini-pro", "gemini-2.5-pro"):
+            return "gemini-3.8-pro"
         return model_name
 
     def get_capabilities(self, model: str) -> ProviderCapabilities:
         clean = self.clean_model_name(model).lower()
-        supports_thinking = "2.5" in clean or "thinking" in clean
+        supports_thinking = "3." in clean or "2.5" in clean or "thinking" in clean
         is_pro = "pro" in clean
         max_context = 2000000 if is_pro else 1000000
 
@@ -67,7 +67,7 @@ class GeminiProvider(LLMProvider):
             supports_system_prompt=True,
             supports_json_mode=True,
             max_context_window=max_context,
-            max_output_tokens=65536 if "2.5" in clean else 8192,
+            max_output_tokens=65536 if ("3." in clean or "2.5" in clean) else 8192,
         )
 
     def translate_tools(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
