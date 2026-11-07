@@ -252,8 +252,8 @@ class GeminiProvider(LLMProvider):
         try:
             import aiohttp
         except ImportError:
-            # Zero-dependency fallback: stream via urllib in background thread
-            async for chunk in self._stream_urllib(url, body, headers, clean_model, abort_signal, **kwargs):
+            # Zero-dependency fallback: stream via urllib in background thread with retry & model fallback
+            async for chunk in self._stream_urllib(base_url, api_key, body, headers, clean_model, abort_signal, **kwargs):
                 yield chunk
             return
 
@@ -348,104 +348,143 @@ class GeminiProvider(LLMProvider):
 
     async def _stream_urllib(
         self,
-        url: str,
+        base_url: str,
+        api_key: str,
         body: dict[str, Any],
         headers: dict[str, str],
         clean_model: str,
         abort_signal: asyncio.Event | None = None,
         **kwargs: Any,
     ) -> AsyncGenerator[dict[str, Any], None]:
-        """Fallback streaming via standard library urllib and threading."""
+        """Fallback streaming via standard library urllib and threading with automatic retry & fallback."""
         import queue
         import threading
+        import time
         import urllib.error
         import urllib.request
 
         q: queue.Queue[tuple[str, Any]] = queue.Queue()
 
         def worker() -> None:
-            try:
-                data = json.dumps(body).encode("utf-8")
-                req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-                with urllib.request.urlopen(req, timeout=kwargs.get("timeout", 180)) as resp:
-                    full_text = ""
-                    prompt_tokens = 0
-                    completion_tokens = 0
+            models_to_try = [clean_model]
+            if clean_model in ("gemini-3.8-flash", "gemini-2.5-flash", "gemini-3.1-flash-lite"):
+                for alt in ("gemini-2.0-flash", "gemini-1.5-flash", "gemini-3.8-pro", "gemini-1.5-pro"):
+                    if alt not in models_to_try:
+                        models_to_try.append(alt)
+            elif clean_model in ("gemini-3.8-pro", "gemini-2.5-pro", "gemini-pro"):
+                for alt in ("gemini-3.8-flash", "gemini-2.0-flash", "gemini-1.5-pro"):
+                    if alt not in models_to_try:
+                        models_to_try.append(alt)
 
-                    for line_bytes in resp:
-                        if abort_signal and abort_signal.is_set():
-                            q.put(("chunk", {"type": "error", "error": "Request cancelled by user"}))
+            last_error = ""
+            for current_model in models_to_try:
+                current_url = f"{base_url}/v1beta/models/{current_model}:streamGenerateContent?alt=sse&key={api_key}"
+
+                for attempt in range(2):
+                    if abort_signal and abort_signal.is_set():
+                        q.put(("chunk", {"type": "error", "error": "Request cancelled by user"}))
+                        q.put(("eof", None))
+                        return
+
+                    try:
+                        data = json.dumps(body).encode("utf-8")
+                        req = urllib.request.Request(current_url, data=data, headers=headers, method="POST")
+                        with urllib.request.urlopen(req, timeout=kwargs.get("timeout", 180)) as resp:
+                            full_text = ""
+                            prompt_tokens = 0
+                            completion_tokens = 0
+
+                            for line_bytes in resp:
+                                if abort_signal and abort_signal.is_set():
+                                    q.put(("chunk", {"type": "error", "error": "Request cancelled by user"}))
+                                    q.put(("eof", None))
+                                    return
+
+                                line = line_bytes.decode("utf-8", errors="replace").strip()
+                                if not line or not line.startswith("data:"):
+                                    continue
+
+                                data_str = line[5:].strip()
+                                if not data_str:
+                                    continue
+
+                                try:
+                                    item = json.loads(data_str)
+                                except json.JSONDecodeError:
+                                    continue
+
+                                usage = item.get("usageMetadata", {})
+                                if usage:
+                                    prompt_tokens = usage.get("promptTokenCount", prompt_tokens)
+                                    completion_tokens = usage.get("candidatesTokenCount", completion_tokens)
+
+                                candidates = item.get("candidates", [])
+                                if not candidates:
+                                    continue
+
+                                candidate = candidates[0]
+                                candidate_content = candidate.get("content", {})
+                                parts = candidate_content.get("parts", [])
+
+                                for part in parts:
+                                    if part.get("thought"):
+                                        thought_text = part.get("text", "")
+                                        if thought_text:
+                                            q.put(("chunk", {"type": "thinking_delta", "thinking": thought_text}))
+                                    elif "text" in part:
+                                        text_val = part.get("text", "")
+                                        if text_val:
+                                            full_text += text_val
+                                            q.put(("chunk", {"type": "text_delta", "text": text_val}))
+                                    elif "functionCall" in part:
+                                        fc = part["functionCall"]
+                                        sig = (
+                                            part.get("thoughtSignature")
+                                            or part.get("thought_signature")
+                                            or fc.get("thoughtSignature")
+                                            or fc.get("thought_signature")
+                                            or candidate.get("thoughtSignature")
+                                            or candidate.get("thought_signature")
+                                            or ""
+                                        )
+                                        q.put(("chunk", {
+                                            "type": "tool_use",
+                                            "id": fc.get("id") or f"call_{uuid.uuid4().hex[:8]}",
+                                            "name": fc.get("name", ""),
+                                            "input": fc.get("args", {}),
+                                            "thought_signature": sig,
+                                        }))
+
+                            q.put(("chunk", {
+                                "type": "done",
+                                "text": full_text,
+                                "model": current_model,
+                                "eval_count": completion_tokens,
+                                "prompt_eval_count": prompt_tokens,
+                            }))
+                            q.put(("eof", None))
                             return
 
-                        line = line_bytes.decode("utf-8", errors="replace").strip()
-                        if not line or not line.startswith("data:"):
+                    except urllib.error.HTTPError as e:
+                        err_text = e.read().decode("utf-8", errors="replace")
+                        last_error = f"Gemini API error ({e.code}): {err_text}"
+                        if e.code in (503, 429):
+                            # Temporary capacity spike - backoff and retry or fallback
+                            logger.info(f"Gemini {current_model} busy ({e.code}). Retrying or falling back to alternate model...")
+                            time.sleep(1.2)
                             continue
+                        elif e.code == 404:
+                            # Model not found or deprecated - immediately try next model in candidate chain
+                            break
+                        else:
+                            # 400 or auth failure - don't hammer
+                            break
+                    except Exception as e:
+                        last_error = f"Gemini connection error: {e}"
+                        break
 
-                        data_str = line[5:].strip()
-                        if not data_str:
-                            continue
-
-                        try:
-                            item = json.loads(data_str)
-                        except json.JSONDecodeError:
-                            continue
-
-                        usage = item.get("usageMetadata", {})
-                        if usage:
-                            prompt_tokens = usage.get("promptTokenCount", prompt_tokens)
-                            completion_tokens = usage.get("candidatesTokenCount", completion_tokens)
-
-                        candidates = item.get("candidates", [])
-                        if not candidates:
-                            continue
-
-                        candidate = candidates[0]
-                        candidate_content = candidate.get("content", {})
-                        parts = candidate_content.get("parts", [])
-
-                        for part in parts:
-                            if part.get("thought"):
-                                thought_text = part.get("text", "")
-                                if thought_text:
-                                    q.put(("chunk", {"type": "thinking_delta", "thinking": thought_text}))
-                            elif "text" in part:
-                                text_val = part.get("text", "")
-                                if text_val:
-                                    full_text += text_val
-                                    q.put(("chunk", {"type": "text_delta", "text": text_val}))
-                            elif "functionCall" in part:
-                                fc = part["functionCall"]
-                                sig = (
-                                    part.get("thoughtSignature")
-                                    or part.get("thought_signature")
-                                    or fc.get("thoughtSignature")
-                                    or fc.get("thought_signature")
-                                    or candidate.get("thoughtSignature")
-                                    or candidate.get("thought_signature")
-                                    or ""
-                                )
-                                q.put(("chunk", {
-                                    "type": "tool_use",
-                                    "id": fc.get("id") or f"call_{uuid.uuid4().hex[:8]}",
-                                    "name": fc.get("name", ""),
-                                    "input": fc.get("args", {}),
-                                    "thought_signature": sig,
-                                }))
-
-                    q.put(("chunk", {
-                        "type": "done",
-                        "text": full_text,
-                        "model": clean_model,
-                        "eval_count": completion_tokens,
-                        "prompt_eval_count": prompt_tokens,
-                    }))
-            except urllib.error.HTTPError as e:
-                err_text = e.read().decode("utf-8", errors="replace")
-                q.put(("chunk", {"type": "error", "error": f"Gemini API error ({e.code}): {err_text}"}))
-            except Exception as e:
-                q.put(("chunk", {"type": "error", "error": f"Gemini connection error: {e}"}))
-            finally:
-                q.put(("eof", None))
+            q.put(("chunk", {"type": "error", "error": last_error or "All candidate Gemini models temporarily unavailable"}))
+            q.put(("eof", None))
 
         t = threading.Thread(target=worker, daemon=True)
         t.start()
