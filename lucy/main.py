@@ -924,6 +924,7 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("--harness", default=None, help="Run LLM evaluation benchmark suite (all, coding, debugging, security, workstation)")
 @click.option("--harness2", default=None, help="Run Harness² recursive self-improvement cycle on target domain (e.g. coding, debugging)")
 @click.option("--firebase", is_flag=True, default=False, help="Enable background Firebase mobile bridge for phone alerts & remote commands")
+@click.option("--companion", is_flag=True, default=False, help="Launch interactive pixel art dog companion in the terminal")
 @click.argument("initial_prompt", nargs=-1, required=False)
 def cli(
     prompt: str | None,
@@ -947,11 +948,19 @@ def cli(
     harness: str | None,
     harness2: str | None,
     firebase: bool,
+    companion: bool,
     initial_prompt: tuple[str, ...],
 ):
     """Lucy Code — AI-powered coding assistant in your terminal."""
     if version:
         click.echo(f"Lucy Code v{__version__}")
+        return
+
+    # Pixel Art Dog Companion mode
+    if companion or (initial_prompt and len(initial_prompt) == 1 and initial_prompt[0] in ("companion", "pet", "dog")):
+        from lucy.tui.companion import DogCompanion
+        comp = DogCompanion(name="Pixel")
+        comp.run_interactive()
         return
 
     if serve_mcp:

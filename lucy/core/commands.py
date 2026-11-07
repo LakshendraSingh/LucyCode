@@ -923,6 +923,7 @@ def _register_extended_commands():
         "lucy.commands.harness2_commands",
         "lucy.commands.firebase_commands",
         "lucy.commands.presentation_commands",
+        "lucy.commands.companion_commands",
     ]
     for mod_name in modules:
         try:
