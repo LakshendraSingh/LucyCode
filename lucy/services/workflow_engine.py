@@ -123,8 +123,15 @@ class WorkflowEngine:
         self._active_runs: dict[str, WorkflowRun] = {}
         self._cancellation_tokens: set[str] = set()
 
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
-        self.runs_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.storage_dir.mkdir(parents=True, exist_ok=True)
+            self.runs_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError) as e:
+            logger.debug("Failed creating storage_dir %s: %s, falling back to /tmp/lucycode_workflows", self.storage_dir, e)
+            self.storage_dir = Path("/tmp/lucycode_workflows")
+            self.runs_dir = self.storage_dir / "runs"
+            self.storage_dir.mkdir(parents=True, exist_ok=True)
+            self.runs_dir.mkdir(parents=True, exist_ok=True)
 
     def create_workflow(self, name: str, description: str = "", tags: list[str] | None = None) -> Workflow:
         """Create and persist a new empty workflow."""
