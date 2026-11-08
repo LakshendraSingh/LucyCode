@@ -113,28 +113,20 @@ class FileEditTool(Tool):
         except OSError as e:
             return ToolResult(error=f"Cannot read file: {e}")
 
-        # Find occurrences of old_text
-        count = content.count(old_text)
+        # Apply the edit with multi-stage fuzzy patching
+        from lucy.core.fuzzy_patcher import FuzzyPatcher
 
-        if count == 0:
-            # Help user debug: show a snippet of the file near where it might be
+        patch_res = FuzzyPatcher.apply_patch(content, old_text, new_text)
+
+        if not patch_res.success:
             return ToolResult(
                 error=(
-                    f"old_text not found in {file_path}. "
-                    "Make sure the text matches exactly, including whitespace and indentation."
+                    f"old_text could not be applied to {file_path}: {patch_res.error}\n"
+                    "Make sure the target lines exist in the file and sufficient context is provided."
                 )
             )
 
-        if count > 1:
-            return ToolResult(
-                error=(
-                    f"old_text appears {count} times in {file_path}. "
-                    "Please provide more context to make the match unique."
-                )
-            )
-
-        # Apply the edit
-        new_content = content.replace(old_text, new_text, 1)
+        new_content = patch_res.new_content
 
         # Record change for undo/revert
         try:
@@ -157,10 +149,11 @@ class FileEditTool(Tool):
         old_lines = old_text.count("\n") + 1
         new_lines = new_text.count("\n") + 1
         delta = new_lines - old_lines
+        stage_info = f" via {patch_res.stage_used}" if patch_res.stage_used != "exact" else ""
 
         return ToolResult(
             data=(
                 f"Edited {file_path}: replaced {old_lines} lines with {new_lines} lines "
-                f"({'+' if delta >= 0 else ''}{delta} net)"
+                f"({'+' if delta >= 0 else ''}{delta} net){stage_info}"
             )
         )

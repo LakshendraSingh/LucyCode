@@ -957,6 +957,7 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("--sandbox-mode", default=None, type=click.Choice(["workspace", "strict", "read_only"]), help="Sandbox isolation profile (workspace, strict, read_only)")
 @click.option("--harness", default=None, help="Run LLM evaluation benchmark suite (all, coding, debugging, security, workstation)")
 @click.option("--harness2", default=None, help="Run Harness² recursive self-improvement cycle on target domain (e.g. coding, debugging)")
+@click.option("--swebench", default=None, help="Run SWE-bench autonomous evaluation on dataset (.json/.jsonl)")
 @click.option("--firebase", is_flag=True, default=False, help="Enable background Firebase mobile bridge for phone alerts & remote commands")
 @click.option("--companion", is_flag=True, default=False, help="Launch interactive pixel art dog companion in the terminal")
 @click.option("--web", "--remote", "web_server", is_flag=True, default=False, help="Start Lucy mobile web & WebSocket server on http://127.0.0.1:9847")
@@ -983,6 +984,7 @@ def cli(
     sandbox_mode: str | None,
     harness: str | None,
     harness2: str | None,
+    swebench: str | None,
     firebase: bool,
     companion: bool,
     web_server: bool,
@@ -1075,6 +1077,34 @@ def cli(
         res_str = "SUCCESS (Composed & Distilled)" if ok else "REJECTED (No improvement)"
         click.echo(f"Outcome: {res_str} | Score Delta: {rep.score_delta:+.2f}")
         click.echo(f"Behavioral Contrast: {rep.behavioral_contrast}")
+        return
+
+    # SWE-bench Autonomous Evaluation mode
+    if swebench:
+        from lucy.core.swe_bench import SWEBenchRunner
+        runner = SWEBenchRunner(workspace_root=os.getcwd(), model=model)
+        click.echo(f"Starting SWE-bench evaluation on {swebench}...")
+        try:
+            instances = runner.load_dataset(swebench)
+        except Exception as e:
+            click.echo(f"Failed to load dataset: {e}", err=True)
+            return
+
+        async def _eval_all():
+            results = []
+            for i, inst in enumerate(instances, 1):
+                click.echo(f"[{i}/{len(instances)}] Evaluating {inst.instance_id}...")
+                res = await runner.run_instance(inst)
+                results.append(res)
+                status_str = "RESOLVED" if res.resolved else "UNRESOLVED"
+                click.echo(f" -> {status_str} ({res.execution_time_seconds}s)")
+            runner.export_predictions(results, "predictions.jsonl")
+            resolved = sum(1 for r in results if r.resolved)
+            rate = (resolved / len(results) * 100) if results else 0
+            click.echo(f"\nSWE-bench completed: {resolved}/{len(results)} resolved ({rate:.1f}%).")
+            click.echo("Exported predictions to predictions.jsonl")
+
+        asyncio.run(_eval_all())
         return
 
     # Determine mode

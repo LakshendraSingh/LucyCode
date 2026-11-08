@@ -33,6 +33,21 @@ Lucy Code is an autonomous, goal-driven AI coding assistant built from the groun
   - Open `SKILL.md` format compatible with modern agent standards.
   - **11 Built-in Production Skills**: `presentation-design`, `debugging`, `security-audit`, `code-review`, `performance`, `testing`, `refactoring`, `python`, `typescript`, `git-workflow`, and `api-design`.
   - Context-aware auto-activation based on file extensions, project root indicators, and prompt keywords.
+- **Resilient Multi-Stage Fuzzy Patching**:
+  - Eliminates brittle string replacement failures with a 5-tier surgical patching pipeline: `exact` -> `whitespace_normalized` -> `indentation_shift` -> `anchor_fuzzy` (threshold 0.82) -> `<<<<<<< SEARCH/REPLACE` block parser.
+  - Transparent fallback keeps model code modifications lossless and reliable across different indentations or line endings.
+- **Structural AST Graph & PageRank Repo-Map**:
+  - Automatically parses syntax trees across Python, TypeScript/JavaScript, Rust, Go, and C/C++.
+  - Constructs a cross-file reference graph and applies PageRank centrality scoring to prioritize architectural hubs (`models.py`, `service.py`, `query.py`).
+  - Automatically injects high-density symbol maps into LLM prompt contexts to minimize hallucination on large repositories.
+- **Hardened OS Sandbox & Credential Sanitizer**:
+  - **Symlink Traversal Defense**: Canonical `realpath` resolution preventing directory escapes or symlink attacks.
+  - **Credential Environment Scrubbing**: Subprocess environment scrubbing strips sensitive tokens and secrets (`GEMINI_API_KEY`, `OPENAI_API_KEY`, AWS tokens, SSH agents) from spawned shells.
+  - **macOS Seatbelt Profiles**: Generates declarative sandbox profiles for kernel-enforced process containment.
+- **SWE-bench Compatible Benchmark Runner**:
+  - Standardized evaluation harness compatible with Princeton SWE-bench datasets (`.json` and `.jsonl`).
+  - Autonomous multi-turn problem solving in isolated git workspaces.
+  - Direct export to official `predictions.jsonl` submission schema with `/swebench export` and `--swebench`.
 - **Enhanced MCP (Client + Server + SSE)**:
   - Model Context Protocol client supporting `stdio`, `sse`, and `streamable-http` transports with OAuth2 auth.
   - **Lucy as an MCP Server** (`--serve-mcp`): Expose Lucy's tools and intelligence to Claude Desktop, Cursor, Zed, and any MCP-compliant client.
@@ -533,14 +548,14 @@ Open the directory in VS Code and press `F5` to launch an Extension Development 
 
 ## The Developer Toolbelt (40+ Tools)
 
-| Category         | Tools                                                                                                                                                                                                             |
-| :--------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Filesystem**   | `read`, `write`, `edit`, `revert_change`, `grep`, `glob`, `tree`, `binary_check`, `undo`                                                                                                                         |
-| **System**       | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox`                                                                                                                                               |
+| Category         | Tools                                                                                                                                                                                                                                                                                              |
+| :--------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Filesystem**   | `read`, `write`, `edit`, `revert_change`, `grep`, `glob`, `tree`, `binary_check`, `undo`                                                                                                                                                                                                           |
+| **System**       | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox`                                                                                                                                                                                                                                |
 | **Workstation**  | `ui_inspect`, `ui_click`, `ui_menu`, `ui_type`, `ui_verify`, `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `type_text`, `key_shortcut`, `notify`, `clipboard`, `applescript`, `browser`, `browser_subagent`, `email`, `workflow`, `speak`, `screen_info`, `presentation` |
-| **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval`                                                                                                                                               |
-| **Environment**  | `lsp`, `mcp`, `notebook`, `config`, `ask_user`                                                                                                                                                                    |
-| **Exploration**  | `web_search`, `web_fetch`, `computer_use`, `sleep`                                                                                                                                                                |
+| **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval`                                                                                                                                                                                                                                |
+| **Environment**  | `lsp`, `mcp`, `notebook`, `config`, `ask_user`                                                                                                                                                                                                                                                     |
+| **Exploration**  | `web_search`, `web_fetch`, `computer_use`, `sleep`                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -548,20 +563,21 @@ Open the directory in VS Code and press `F5` to launch an Extension Development 
 
 Type `/` in the interactive REPL to trigger system commands:
 
-| Command     | Description                            | Command         | Description                              |
-| :---------- | :------------------------------------- | :-------------- | :--------------------------------------- |
-| `/goal`     | Autonomous goal planning & execution   | `/automate`     | Workstation & workflow automation        |
-| `/skills`   | Browse and toggle agent skills         | `/sandbox`      | Manage sandbox isolation levels          |
-| `/model`    | Switch model/provider on the fly       | `/plan`         | Create or view execution plan            |
-| `/cost`     | Token usage & cost analytics           | `/status`       | System health & usage stats              |
-| `/doctor`   | Run comprehensive system diagnostics   | `/memory`       | Semantic memory inspection               |
-| `/mcp`      | Inspect & manage MCP servers           | `/revert`       | Revert / undo changes (`/revert all`)    |
-| `/dream`    | Proactive background codebase indexing | `/tasks`        | View running background tasks            |
-| `/sessions` | Save, list, or resume chat sessions    | `/voice`        | Toggle voice transcription               |
-| `/harness`  | LLM evaluation & benchmark suite       | `/harness2`     | Harness² recursive self-improvement      |
-| `/firebase` | Mobile phone remote bridge & alerts    | `/presentation` | Create executive 16:9 presentation decks |
-| `/init`     | Generate a `LUCY.md` prompt for repo   | `/autonomous`   | Toggle autonomous mode (zero prompts)    |
-| `/companion`| Pixel art dog companion in terminal    | `/browser`      | CDP Browser Subagent (find & click)      |
+| Command      | Description                            | Command         | Description                              |
+| :----------- | :------------------------------------- | :-------------- | :--------------------------------------- |
+| `/goal`      | Autonomous goal planning & execution   | `/automate`     | Workstation & workflow automation        |
+| `/skills`    | Browse and toggle agent skills         | `/sandbox`      | Manage sandbox isolation levels          |
+| `/model`     | Switch model/provider on the fly       | `/plan`         | Create or view execution plan            |
+| `/cost`      | Token usage & cost analytics           | `/status`       | System health & usage stats              |
+| `/doctor`    | Run comprehensive system diagnostics   | `/memory`       | Semantic memory inspection               |
+| `/mcp`       | Inspect & manage MCP servers           | `/revert`       | Revert / undo changes (`/revert all`)    |
+| `/dream`     | Proactive background codebase indexing | `/tasks`        | View running background tasks            |
+| `/sessions`  | Save, list, or resume chat sessions    | `/voice`        | Toggle voice transcription               |
+| `/harness`   | LLM evaluation & benchmark suite       | `/harness2`     | Harness² recursive self-improvement      |
+| `/firebase`  | Mobile phone remote bridge & alerts    | `/presentation` | Create executive 16:9 presentation decks |
+| `/init`      | Generate a `LUCY.md` prompt for repo   | `/autonomous`   | Toggle autonomous mode (zero prompts)    |
+| `/companion` | Pixel art dog companion in terminal    | `/browser`      | CDP Browser Subagent (find & click)      |
+| `/repomap`   | PageRank structural repository map     | `/swebench`     | Princeton SWE-bench evaluation runner    |
 
 ---
 
@@ -577,7 +593,8 @@ Type `/` in the interactive REPL to trigger system commands:
 | `--permission-mode <mode>` |       | Tool permission policy: `prompt`, `auto_accept`, or `read_only`          |
 | `--autonomous`, `--auto`   | `-y`  | Run in autonomous mode (zero mid-task questions or human prompts)        |
 | `--companion`              |       | Launch interactive pixel art dog companion in the terminal               |
-| `--web`, `--remote`        |       | Start mobile web portal & WebSocket server on http://127.0.0.1:9847     |
+| `--web`, `--remote`        |       | Start mobile web portal & WebSocket server on http://127.0.0.1:9847      |
+| `--swebench <path>`        |       | Run SWE-bench autonomous evaluation on dataset (`.json` or `.jsonl`)     |
 | `--harness [suite]`        |       | Run LLM evaluation benchmarks (`all`, `coding`, `reasoning`)             |
 | `--harness2 [domain]`      |       | Run Harness² recursive self-improvement cycle (`coding`, `debugging`)    |
 | `--firebase`               |       | Start Firebase mobile remote bridge daemon                               |
@@ -595,6 +612,9 @@ Lucy Code is covered by an extensive test suite:
 pytest tests/
 
 # Test specific modules
+pytest tests/test_fuzzy_patcher.py
+pytest tests/test_repomap.py
+pytest tests/test_swe_bench.py
 pytest tests/test_sandbox.py
 pytest tests/test_goal_engine.py
 pytest tests/test_providers.py
@@ -617,8 +637,11 @@ lucycode/
 │   │   ├── client.py
 │   │   ├── models.py
 │   │   └── providers/   # Gemini, OpenAI, DeepSeek, Groq, Mistral, Ollama, etc.
-│   ├── commands/        # Slash command handlers (/goal, /skills, /companion, /harness)
+│   ├── commands/        # Slash command handlers (/goal, /skills, /companion, /repomap, /swebench)
 │   ├── core/            # Agentic orchestration & intelligence
+│   │   ├── fuzzy_patcher.py    # 5-tier resilient diff & fuzzy patching engine
+│   │   ├── repomap.py          # AST & PageRank structural symbol graph
+│   │   ├── swe_bench.py        # SWE-bench autonomous evaluation runner
 │   │   ├── goal_engine.py      # Goal decomposition & auto-correction
 │   │   ├── sandbox.py          # Filesystem containment & credential guardrails
 │   │   ├── skills_engine.py    # Declarative SKILL.md loader & context triggers
@@ -641,7 +664,7 @@ lucycode/
 │   │   └── companion.py # 24-bit TrueColor pixel art companion
 │   └── tools/           # Filesystem, bash, web, workstation, and AST tools
 ├── native/              # C extensions for high-speed file search and diffing
-├── tests/               # Comprehensive test suites (111 passing tests)
+├── tests/               # Comprehensive test suites (123 passing tests)
 └── vscode_extension/    # Official Visual Studio Code extension (LSP & actions)
 ```
 

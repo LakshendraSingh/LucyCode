@@ -145,13 +145,18 @@ class BashTool(Tool):
 
         cwd = context.cwd or os.getcwd()
 
+        # Scrub sensitive credentials if running in sandbox mode
+        exec_env = {**os.environ}
+        if getattr(context, "sandbox", None) and context.sandbox.is_enabled:
+            exec_env = context.sandbox.get_sanitized_env(exec_env)
+
         try:
             proc = await asyncio.create_subprocess_shell(
                 command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=cwd,
-                env={**os.environ},
+                env=exec_env,
             )
 
             try:

@@ -173,6 +173,21 @@ def build_system_prompt(
     if git_status:
         sections.append(f"<git_status>\n{git_status}\n</git_status>")
 
+    # ── Repo Map Injection (Structural Codebase Awareness) ──
+    try:
+        from lucy.core.repomap import get_repo_map
+        rm = get_repo_map(cwd or os.getcwd())
+        map_text = rm.render_map(max_tokens=1200)
+        if map_text and map_text != "(Empty repository)":
+            sections.append(
+                f"<repo_map>\n"
+                f"# Repository Architectural Symbol Map (Ranked by PageRank Centrality)\n"
+                f"{map_text}\n"
+                f"</repo_map>"
+            )
+    except Exception as e:
+        logger.debug("Repo map generation skipped: %s", e)
+
     if custom_instructions:
         sections.append(custom_instructions)
 

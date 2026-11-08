@@ -143,7 +143,7 @@ BUILTIN_TASKS: list[HarnessTask] = [
         prompt="Fix the bug in 'parser.py' so that integer keys in JSON are converted to strings properly without raising AttributeError, and all tests pass.",
         initial_files={
             "parser.py": "def parse_mapping(data):\n    # BUG: assumes all keys are strings and calls lower()\n    return {k.lower(): v for k, v in data.items()}\n",
-            "test_parser.py": "from parser import parse_mapping\ndef test_parse():\n    assert parse_mapping({'A': 1, 2: 'two'}) == {'a': 1, '2': 'two'}\n",
+            "test_parser.py": "import unittest\nfrom parser import parse_mapping\n\nclass TestParser(unittest.TestCase):\n    def test_parse(self):\n        self.assertEqual(parse_mapping({'A': 1, 2: 'two'}), {'a': 1, '2': 'two'})\n",
         },
         expected_files=["parser.py"],
         validation_commands=[
@@ -167,12 +167,12 @@ BUILTIN_TASKS: list[HarnessTask] = [
         id="security_sanitizer",
         name="Command Injection Sanitizer",
         category="security",
-        prompt="Write a module 'sanitizer.py' with a function sanitize_shell_arg(arg: str) -> str that safely escapes shell arguments using standard library shlex.quote and rejects args containing null bytes.",
+        prompt="Write a module 'sanitizer.py' with a function sanitize_shell_arg(arg: str) -> str that safely escapes shell arguments using standard library shlex.quote and raises ValueError if arg contains a null byte (e.g. chr(0) in arg).",
         expected_files=["sanitizer.py"],
         validation_commands=[
-            "python3 -c 'import sanitizer; assert sanitizer.sanitize_shell_arg(\"hello world\") == \"\\\"hello world\\\"\" or sanitizer.sanitize_shell_arg(\"hello world\") == \"\\'hello world\\'\"'",
-            "python3 -c 'import sanitizer; assert sanitizer.sanitize_shell_arg(\"; rm -rf /\") != \"; rm -rf /\"'",
-            "python3 -c 'import sanitizer; \ntry:\n sanitizer.sanitize_shell_arg(\"bad\\x00byte\"); assert False\nexcept ValueError:\n pass'",
+            "python3 -c \"import sanitizer, shlex; assert sanitizer.sanitize_shell_arg('hello world') == shlex.quote('hello world')\"",
+            "python3 -c \"import sanitizer; assert sanitizer.sanitize_shell_arg('; rm -rf /') != '; rm -rf /'\"",
+            "python3 -c \"import sanitizer; ok = False; (None); \ntry:\n sanitizer.sanitize_shell_arg('bad' + chr(0) + 'byte')\nexcept ValueError:\n ok = True\nassert ok\"",
         ],
         tags=["security", "sanitization"],
     ),

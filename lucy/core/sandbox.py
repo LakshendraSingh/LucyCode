@@ -49,8 +49,7 @@ SENSITIVE_PATTERNS = [
     r"\.key$",
     r"keychain($|/)",
     r"credentials\.json$",
-    r"\.env\.local$",
-    r"\.env\.production$",
+    r"(^|/)\.env($|\..*)",
 ]
 
 # Sensitive system directories where writes are permanently forbidden
@@ -144,12 +143,48 @@ class SandboxManager:
             self.config.profile = profile
 
     def is_path_sensitive(self, path: str) -> bool:
-        """Check if a path matches sensitive credentials or secret files."""
-        normalized = os.path.abspath(os.path.expanduser(path))
-        for pattern in SENSITIVE_PATTERNS + self.config.custom_blocked_patterns:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                return True
+        """Check if a path matches sensitive credentials or secret files (resolving symlinks)."""
+        expanded = os.path.expanduser(path)
+        canonical = os.path.realpath(expanded)
+        normalized = os.path.abspath(expanded)
+
+        for target in (normalized, canonical):
+            for pattern in SENSITIVE_PATTERNS + self.config.custom_blocked_patterns:
+                if re.search(pattern, target, re.IGNORECASE):
+                    return True
         return False
+
+    def get_sanitized_env(self, base_env: dict[str, str] | None = None) -> dict[str, str]:
+        """Return a scrubbed environment stripped of cloud API keys, secrets, and auth sockets."""
+        env = dict(base_env or os.environ)
+        sensitive_env_keys = {
+            "AWS_SECRET_ACCESS_KEY", "AWS_ACCESS_KEY_ID", "AWS_SESSION_TOKEN",
+            "GITHUB_TOKEN", "GH_TOKEN", "SSH_AUTH_SOCK", "GPG_AGENT_INFO",
+            "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
+            "DEEPSEEK_API_KEY", "GROQ_API_KEY", "FIREBASE_AUTH_SECRET",
+            "SLACK_BOT_TOKEN", "DISCORD_TOKEN",
+        }
+        for k in list(env.keys()):
+            if k in sensitive_env_keys or "SECRET" in k or "PRIVATE_KEY" in k:
+                env.pop(k, None)
+        return env
+
+    def generate_seatbelt_profile(self) -> str:
+        """Generate Apple Seatbelt Sandbox profile for macOS process isolation."""
+        ws = self.config.workspace_root
+        return (
+            "(version 1)\n"
+            "(deny default)\n"
+            "(allow process-exec)\n"
+            "(allow process-fork)\n"
+            "(allow sysctl-read)\n"
+            "(allow file-read*)\n"
+            f'(allow file-write* (subpath "{ws}"))\n'
+            '(allow file-write* (subpath "/tmp"))\n'
+            '(deny file-write* (subpath "/etc"))\n'
+            '(deny file-write* (subpath "/usr"))\n'
+            '(deny file-write* (subpath "/System"))\n'
+        )
 
     def validate_read_path(self, path: str, cwd: str = "") -> tuple[bool, str]:
         """Validate if reading from this path is permitted."""

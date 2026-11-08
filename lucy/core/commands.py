@@ -925,6 +925,8 @@ def _register_extended_commands():
         "lucy.commands.presentation_commands",
         "lucy.commands.companion_commands",
         "lucy.commands.browser_commands",
+        "lucy.commands.repomap_commands",
+        "lucy.commands.swebench_commands",
     ]
     for mod_name in modules:
         try:
