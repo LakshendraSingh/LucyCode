@@ -160,12 +160,12 @@ class TestWorkstationAutomation(unittest.TestCase):
 
     def test_workstation_tools_registered(self) -> None:
         """Verify all workstation tools conform to Tool interface."""
-        self.assertEqual(len(WORKSTATION_TOOLS), 21)
+        self.assertEqual(len(WORKSTATION_TOOLS), 22)
         names = [t.name for t in WORKSTATION_TOOLS]
         expected = [
             "screenshot", "find_on_screen", "launch_app", "focus_app",
             "list_apps", "type_text", "key_shortcut", "notify", "clipboard",
-            "applescript", "browser", "email", "workflow", "speak", "screen_info",
+            "applescript", "browser", "browser_subagent", "email", "workflow", "speak", "screen_info",
             "presentation",
             "ui_inspect", "ui_click", "ui_menu", "ui_type", "ui_verify",
         ]

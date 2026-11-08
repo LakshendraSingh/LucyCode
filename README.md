@@ -261,6 +261,7 @@ LucyCode includes a native workstation automation engine inspired by OpenClaw an
 - **Deep macOS Control**: Run arbitrary automation scripts and UI scripting via `applescript`.
 - **Visual Vision & OCR**: Inspect display geometry (`screen_info`), capture screenshots (`screenshot`), and locate UI text or buttons via OCR (`find_on_screen`).
 - **Browser Automation**: Search the web, extract readable text summaries (`browser search`), navigate pages (`browser open`), and capture DOM content (`browser get_text`).
+- **Browser Subagent (CDP)**: Autonomous Chrome DevTools Protocol sub-agent (`browser_subagent`) that scans the live DOM, locates buttons/links/inputs by text or selector, and dispatches deterministic mouse click events.
 - **Hardware & Audio**: Speak status aloud via text-to-speech (`speak`), read/write system clipboard (`clipboard`), and send native banner notifications (`notify`).
 - **Persistent Workflows**: Create, save, and execute sequential multi-step tasks across apps, bash commands, browser URLs, and delays with automated error recovery.
 
@@ -455,7 +456,7 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
 | :--------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Filesystem**   | `read`, `write`, `edit`, `revert_change`, `grep`, `glob`, `tree`, `binary_check`, `undo`                                                                                                                         |
 | **System**       | `bash`, `powershell`, `worktree`, `task_manager`, `cron`, `sandbox`                                                                                                                                               |
-| **Workstation**  | `ui_inspect`, `ui_click`, `ui_menu`, `ui_type`, `ui_verify`, `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `type_text`, `key_shortcut`, `notify`, `clipboard`, `applescript`, `browser`, `email`, `workflow`, `speak`, `screen_info`, `presentation` |
+| **Workstation**  | `ui_inspect`, `ui_click`, `ui_menu`, `ui_type`, `ui_verify`, `screenshot`, `find_on_screen`, `launch_app`, `focus_app`, `list_apps`, `type_text`, `key_shortcut`, `notify`, `clipboard`, `applescript`, `browser`, `browser_subagent`, `email`, `workflow`, `speak`, `screen_info`, `presentation` |
 | **Intelligence** | `agent`, `team_create`, `plan`, `briefing`, `reflect`, `skill_eval`                                                                                                                                               |
 | **Environment**  | `lsp`, `mcp`, `notebook`, `config`, `ask_user`                                                                                                                                                                    |
 | **Exploration**  | `web_search`, `web_fetch`, `computer_use`, `sleep`                                                                                                                                                                |
@@ -479,7 +480,7 @@ Type `/` in the interactive REPL to trigger system commands:
 | `/harness`  | LLM evaluation & benchmark suite       | `/harness2`     | Harness² recursive self-improvement      |
 | `/firebase` | Mobile phone remote bridge & alerts    | `/presentation` | Create executive 16:9 presentation decks |
 | `/init`     | Generate a `LUCY.md` prompt for repo   | `/autonomous`   | Toggle autonomous mode (zero prompts)    |
-| `/companion`| Pixel art dog companion in terminal    |                 |                                          |
+| `/companion`| Pixel art dog companion in terminal    | `/browser`      | CDP Browser Subagent (find & click)      |
 
 ---
 

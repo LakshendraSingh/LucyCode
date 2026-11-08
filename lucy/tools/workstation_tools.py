@@ -753,6 +753,7 @@ class GetScreenInfoTool(Tool):
 
 from lucy.tools.presentation_tools import PresentationTool
 from lucy.tools.universal_ui_tools import UNIVERSAL_UI_TOOLS
+from lucy.tools.browser_subagent_tool import BrowserSubagentTool
 
 WORKSTATION_TOOLS: list[Tool] = [
     ScreenshotTool(),
@@ -766,6 +767,7 @@ WORKSTATION_TOOLS: list[Tool] = [
     ClipboardTool(),
     RunAppleScriptTool(),
     BrowserTool(),
+    BrowserSubagentTool(),
     EmailTool(),
     WorkflowTool(),
     SpeakTool(),
