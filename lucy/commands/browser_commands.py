@@ -94,3 +94,4 @@ class BrowserCommand(Command):
 def get_commands() -> list[Command]:
     """Return browser command instances."""
     return [BrowserCommand()]
+

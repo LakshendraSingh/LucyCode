@@ -166,17 +166,42 @@ class BrowserSubagent:
                 clicked_element=elem.to_dict() if elem else None,
                 steps=steps,
             )
-        else:
-            steps.append(f"Failed to find or click target: {click_res.error}")
-            return BrowserSubagentResult(
-                success=False,
-                action="click_button",
-                output=click_res.output,
-                current_url=final_url,
-                page_title=title,
-                error=click_res.error,
-                steps=steps,
-            )
+
+        # Fallback: if CDP click didn't find the element and we are on macOS,
+        # attempt to interact with active desktop browser window (Safari, Chrome, etc.)
+        import sys
+        if sys.platform == "darwin":
+            try:
+                from lucy.services.universal_ui import get_universal_ui
+                uui = get_universal_ui()
+                front = uui.get_frontmost_app()
+                front_app = front.get("name", "")
+                if front.get("is_browser") or front_app in ("Safari", "Google Chrome", "Brave Browser", "Arc", "Microsoft Edge"):
+                    steps.append(f"Attempting native macOS browser interaction on active window in {front_app}")
+                    ui_res = uui.click_element(app_name=front_app, label=button_target)
+                    if ui_res.success:
+                        steps.append(f"Successfully clicked '{button_target}' via native UI accessibility in {front_app}")
+                        return BrowserSubagentResult(
+                            success=True,
+                            action="click_button",
+                            output=f"Successfully clicked '{button_target}' on webpage in {front_app} ({ui_res.message}).",
+                            current_url=front.get("browser_url") or initial_url,
+                            page_title=front.get("browser_title") or title,
+                            steps=steps,
+                        )
+            except Exception as e:
+                logger.debug("Universal UI browser click fallback failed: %s", e)
+
+        steps.append(f"Failed to find or click target: {click_res.error}")
+        return BrowserSubagentResult(
+            success=False,
+            action="click_button",
+            output=click_res.output,
+            current_url=final_url,
+            page_title=title,
+            error=click_res.error,
+            steps=steps,
+        )
 
     async def execute_task(self, task: str) -> BrowserSubagentResult:
         """
@@ -263,3 +288,4 @@ def get_browser_subagent() -> BrowserSubagent:
     if _global_browser_subagent is None:
         _global_browser_subagent = BrowserSubagent()
     return _global_browser_subagent
+

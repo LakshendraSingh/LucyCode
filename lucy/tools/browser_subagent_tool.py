@@ -159,3 +159,4 @@ class BrowserSubagentTool(Tool):
 
         except Exception as e:
             return ToolResult(error=f"Browser Subagent error: {e}")
+

@@ -281,7 +281,7 @@ class CDPClient:
         except Exception:
             return False
 
-    async def auto_launch_chrome(self, headless: bool = False) -> bool:
+    async def auto_launch_chrome(self, headless: bool = False, url: str | None = None) -> bool:
         """Launch Chrome with remote debugging if not already listening."""
         if await self.is_cdp_available():
             return True
@@ -307,21 +307,32 @@ class CDPClient:
             )
 
         if not chosen_binary:
-            logger.debug("No Chromium binary found for auto-launch; falling back to simulation")
+            logger.debug("No Chromium binary found for auto-launch")
             return False
+
+        profile_dir = os.path.expanduser("~/.lucycode/cdp_chrome_profile")
+        os.makedirs(profile_dir, exist_ok=True)
 
         args = [
             chosen_binary,
             f"--remote-debugging-port={self.port}",
+            f"--user-data-dir={profile_dir}",
             "--remote-allow-origins=*",
             "--no-first-run",
             "--no-default-browser-check",
         ]
         if headless:
             args.append("--headless=new")
+        if url:
+            args.append(url)
 
         try:
-            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self._proc = subprocess.Popen(
+                args,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
             # Wait up to 5s for the CDP port to open
             for _ in range(25):
                 await asyncio.sleep(0.2)
@@ -332,18 +343,16 @@ class CDPClient:
 
         return False
 
-    async def connect(self, auto_launch: bool = True) -> bool:
+    async def connect(self, auto_launch: bool = True, url: str | None = None) -> bool:
         """Connect to active browser target via CDP WebSocket."""
         if self._mock_mode:
             return True
 
         if not await self.is_cdp_available():
             if auto_launch:
-                launched = await self.auto_launch_chrome()
+                launched = await self.auto_launch_chrome(url=url)
                 if not launched:
-                    # Switch to mock/simulated CDP for seamless fallback
-                    self.set_mock_mode(True)
-                    return True
+                    return False
             else:
                 return False
 
@@ -363,6 +372,8 @@ class CDPClient:
             # If no existing page target, create one via /json/new
             if not ws_url:
                 new_url = f"http://{self.host}:{self.port}/json/new"
+                if url:
+                    new_url += f"?{urllib.parse.quote(url)}"
                 req_new = urllib.request.Request(new_url, method="PUT", headers={"User-Agent": "LucyCode-CDP"})
                 with urllib.request.urlopen(req_new, timeout=2.0) as resp:
                     new_target = json.loads(resp.read().decode("utf-8"))
@@ -371,12 +382,10 @@ class CDPClient:
 
         except Exception as e:
             logger.debug("Error discovering CDP targets: %s", e)
-            self.set_mock_mode(True)
-            return True
+            return False
 
         if not ws_url:
-            self.set_mock_mode(True)
-            return True
+            return False
 
         # Connect WebSocket
         try:
@@ -391,8 +400,7 @@ class CDPClient:
             return True
         except Exception as e:
             logger.debug("Failed connecting to CDP WebSocket %s: %s", ws_url, e)
-            self.set_mock_mode(True)
-            return True
+            return False
 
     def _handle_ws_message(self, message: str) -> None:
         """Route incoming JSON-RPC response or event."""
@@ -503,10 +511,20 @@ class CDPClient:
 
         return {"result": {}}
 
+    def _extract_eval_value(self, res: dict[str, Any]) -> Any:
+        """Extract value from CDP Runtime.evaluate response."""
+        if "result" in res:
+            sub = res["result"]
+            if isinstance(sub, dict) and "result" in sub and isinstance(sub["result"], dict) and "value" in sub["result"]:
+                return sub["result"]["value"]
+            if isinstance(sub, dict) and "value" in sub:
+                return sub["value"]
+        return None
+
     async def navigate(self, url: str) -> bool:
         """Navigate active page to URL."""
         if not self.is_connected:
-            await self.connect()
+            await self.connect(url=url)
         res = await self.send("Page.navigate", {"url": url})
         await asyncio.sleep(0.01 if self._mock_mode else 0.5)
         return "error" not in res
@@ -514,12 +532,12 @@ class CDPClient:
     async def get_current_url(self) -> str:
         """Query current browser URL."""
         res = await self.send("Runtime.evaluate", {"expression": "window.location.href"})
-        return res.get("result", {}).get("value", "")
+        return self._extract_eval_value(res) or ""
 
     async def get_page_title(self) -> str:
         """Query current page title."""
         res = await self.send("Runtime.evaluate", {"expression": "document.title"})
-        return res.get("result", {}).get("value", "")
+        return self._extract_eval_value(res) or ""
 
     async def find_clickable_elements(self, filter_text: str | None = None) -> list[CDPElement]:
         """Find all buttons, links, and interactive elements on the page via CDP DOM inspection."""
@@ -579,7 +597,7 @@ class CDPClient:
         })()
         """
         res = await self.send("Runtime.evaluate", {"expression": js_query, "returnByValue": True})
-        raw_items = res.get("result", {}).get("value", [])
+        raw_items = self._extract_eval_value(res) or []
 
         elements: list[CDPElement] = []
         filter_lower = filter_text.lower().strip() if filter_text else None
