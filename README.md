@@ -450,6 +450,87 @@ The Firebase Remote Bridge connects your workstation directly to your mobile pho
 
 ---
 
+## Mobile & Web Portal with File Upload (`--web`)
+
+Lucy Code includes an integrated browser portal served locally over HTTP and RFC 6455 WebSockets, providing an agentic interface for mobile phones, tablets, or desktop browsers without needing an active terminal window.
+
+### Features
+
+- **Full Agentic Execution**: Directly prompts Lucy with access to all 40+ developer tools, slash commands, and multi-turn conversational memory.
+- **Drag-and-Drop File Uploads**: Drag any source file, document, or archive directly into the browser chat window, or use the attachment button (`lucy/services/mobile_web/index.html`). Files are stored in your workspace `uploads/` directory and injected into Lucy's prompt context.
+- **RFC 6455 WebSocket Bridge**: Pure-Python, zero-dependency streaming WebSocket protocol handling real-time tool execution notifications, text streaming, and automatic reconnects.
+- **Interactive Companion Widget**: Features an authentic 24x24 pixel art dog companion ("Pixel") rendered directly on an HTML5 canvas with live pet, feed, bark, and sleep actions.
+
+### Running the Web Server
+
+```bash
+# Start local web portal and WebSocket daemon on port 9847
+lucy --web
+
+# Or specify a custom port
+python3 -m lucy.services.remote_server 9847
+```
+
+Navigate to `http://127.0.0.1:9847` in your browser.
+
+---
+
+## Pixel Art Dog Companion (`--companion`)
+
+Lucy Code includes an authentic, retro 24-bit TrueColor pixel art companion named Pixel to keep you company while coding in the terminal or on the web.
+
+### Features
+
+- **Procedural Pixel Art**: 24x24 sprite engine rendered via Unicode half-blocks (`▀` / `▄`) with 24-bit TrueColor palette support.
+- **Continuous Animation Loop**: Tail wagging, breathing idle cycles, blinking, and sleep animations.
+- **Interactive Controls**:
+  - `P` or Space: Pet Pixel (increases happiness, displays heart thought bubble).
+  - `F` or `T`: Feed a bone treat.
+  - `B`: Bark and deliver random developer advice and coding wisdom.
+  - `S`: Toggle nap / sleep mode.
+  - `Q` or Esc: Exit companion mode.
+
+### Launching the Companion
+
+```bash
+# Standalone animated companion loop
+lucy --companion
+
+# Inside the Lucy REPL
+/companion
+/pet
+/companion feed
+/companion live
+```
+
+---
+
+## Visual Studio Code Extension
+
+Lucy Code includes an official VS Code extension located in `vscode_extension/` that integrates the agentic engine directly into your editor workflow.
+
+### Features
+
+- **Context Menu Actions**: Highlight code in any editor tab, right-click, and select:
+  - **Ask Lucy Code**: Ask questions about the highlighted code.
+  - **Fix with Lucy Code**: Diagnose and repair syntax, typing, or runtime errors.
+  - **Refactor with Lucy Code**: Apply automated clean code transformations.
+  - **Explain with Lucy Code**: Generate plain-English architectural breakdowns.
+  - **Generate Tests**: Automatically scaffold unit tests for the active file.
+- **Autonomous Goal Launcher**: Run `lucy.goal` from the command palette to execute multi-step goals with automated planning and test verification.
+- **LSP Server Integration**: Connects via JSON-RPC over stdio to `python3 -m lucy --lsp`.
+
+### Installing the Extension
+
+```bash
+cd vscode_extension
+npm install
+```
+
+Open the directory in VS Code and press `F5` to launch an Extension Development Host.
+
+---
+
 ## The Developer Toolbelt (40+ Tools)
 
 | Category         | Tools                                                                                                                                                                                                             |
@@ -496,6 +577,7 @@ Type `/` in the interactive REPL to trigger system commands:
 | `--permission-mode <mode>` |       | Tool permission policy: `prompt`, `auto_accept`, or `read_only`          |
 | `--autonomous`, `--auto`   | `-y`  | Run in autonomous mode (zero mid-task questions or human prompts)        |
 | `--companion`              |       | Launch interactive pixel art dog companion in the terminal               |
+| `--web`, `--remote`        |       | Start mobile web portal & WebSocket server on http://127.0.0.1:9847     |
 | `--harness [suite]`        |       | Run LLM evaluation benchmarks (`all`, `coding`, `reasoning`)             |
 | `--harness2 [domain]`      |       | Run Harness² recursive self-improvement cycle (`coding`, `debugging`)    |
 | `--firebase`               |       | Start Firebase mobile remote bridge daemon                               |
@@ -517,6 +599,9 @@ pytest tests/test_sandbox.py
 pytest tests/test_goal_engine.py
 pytest tests/test_providers.py
 pytest tests/test_skills.py
+pytest tests/test_browser_subagent.py
+pytest tests/test_remote_server.py
+pytest tests/test_companion.py
 pytest tests/test_enhanced_mcp_amplifiers.py
 ```
 
@@ -526,12 +611,13 @@ pytest tests/test_enhanced_mcp_amplifiers.py
 
 ```
 lucycode/
+├── frontend/            # React Ink terminal UI frontend (Node / TypeScript)
 ├── lucy/
 │   ├── api/             # Universal LLM providers & streaming clients
 │   │   ├── client.py
 │   │   ├── models.py
 │   │   └── providers/   # Gemini, OpenAI, DeepSeek, Groq, Mistral, Ollama, etc.
-│   ├── commands/        # Slash command handlers (/goal, /skills, /harness, /harness2, /firebase)
+│   ├── commands/        # Slash command handlers (/goal, /skills, /companion, /harness)
 │   ├── core/            # Agentic orchestration & intelligence
 │   │   ├── goal_engine.py      # Goal decomposition & auto-correction
 │   │   ├── sandbox.py          # Filesystem containment & credential guardrails
@@ -542,14 +628,21 @@ lucycode/
 │   │   ├── context_engine.py   # Token compression & diff summarization
 │   │   ├── harness.py          # LLM evaluation & benchmarking engine
 │   │   └── recursive_harness.py # Harness² recursive agent self-improvement
-│   ├── services/        # MCP server/client, Firebase bridge & mobile web
-│   │   ├── firebase_bridge.py
+│   ├── services/        # MCP server/client, CDP browser agent, remote WebSocket server
+│   │   ├── cdp_client.py       # Pure-Python RFC 6455 CDP browser automation
+│   │   ├── browser_subagent.py # Autonomous DOM element locator and clicker
+│   │   ├── remote_server.py    # RFC 6455 WebSocket & HTTP bridge daemon
+│   │   ├── firebase_bridge.py  # Mobile remote phone bridge gateway
 │   │   └── mobile_web/
+│   │       ├── index.html      # Mobile web app with companion & file upload
 │   │       └── firebase_app.html
 │   ├── skills/          # Built-in SKILL.md definition packs
+│   ├── tui/             # Terminal UI renderer & Pixel companion sprite engine
+│   │   └── companion.py # 24-bit TrueColor pixel art companion
 │   └── tools/           # Filesystem, bash, web, workstation, and AST tools
 ├── native/              # C extensions for high-speed file search and diffing
-└── tests/               # Unit and integration test suites
+├── tests/               # Comprehensive test suites (111 passing tests)
+└── vscode_extension/    # Official Visual Studio Code extension (LSP & actions)
 ```
 
 ---
