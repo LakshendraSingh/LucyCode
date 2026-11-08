@@ -492,7 +492,7 @@ Navigate to `http://127.0.0.1:9847` in your browser.
 
 ## Pixel Art Dog Companion (`--companion`)
 
-Lucy Code includes an authentic, retro 24-bit TrueColor pixel art companion named Pixel to keep you company while coding in the terminal or on the web.
+Lucy Code includes an authentic, retro 24-bit TrueColor pixel art companion named Lucy to keep you company while coding in the terminal or on the web.
 
 ### Features
 
