@@ -959,6 +959,7 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("--harness2", default=None, help="Run Harness² recursive self-improvement cycle on target domain (e.g. coding, debugging)")
 @click.option("--firebase", is_flag=True, default=False, help="Enable background Firebase mobile bridge for phone alerts & remote commands")
 @click.option("--companion", is_flag=True, default=False, help="Launch interactive pixel art dog companion in the terminal")
+@click.option("--web", "--remote", "web_server", is_flag=True, default=False, help="Start Lucy mobile web & WebSocket server on http://127.0.0.1:9847")
 @click.argument("initial_prompt", nargs=-1, required=False)
 def cli(
     prompt: str | None,
@@ -984,6 +985,7 @@ def cli(
     harness2: str | None,
     firebase: bool,
     companion: bool,
+    web_server: bool,
     initial_prompt: tuple[str, ...],
 ):
     """Lucy Code — AI-powered coding assistant in your terminal."""
@@ -1001,6 +1003,23 @@ def cli(
         from lucy.tui.companion import DogCompanion
         comp = DogCompanion(name="Pixel")
         comp.run_interactive()
+        return
+
+    # Mobile Web & WebSocket Server mode
+    if web_server or (initial_prompt and len(initial_prompt) == 1 and initial_prompt[0] in ("web", "serve-web")):
+        import webbrowser
+        from lucy.services.remote_server import run_remote_server
+        click.echo("⚡ Starting Lucy Mobile Web & WebSocket Server...")
+        click.echo("   • Web App:   http://127.0.0.1:9847")
+        click.echo("   • WebSocket: ws://127.0.0.1:9847")
+        try:
+            webbrowser.open("http://127.0.0.1:9847")
+        except Exception:
+            pass
+        try:
+            asyncio.run(run_remote_server(host="127.0.0.1", port=9847))
+        except KeyboardInterrupt:
+            click.echo("\nServer stopped.")
         return
 
     if serve_mcp:

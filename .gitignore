@@ -40,6 +40,9 @@ logs/
 spec.json
 result.json
 tmp*/
+uploads/
+extracted_docx/
+read_docx.py
 *.pptx
 ~$*
 

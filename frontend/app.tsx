@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { render, Box, Text } from 'ink';
 import { spawn } from 'child_process';
 import readline from 'readline';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, '..');
+const venvPython = path.join(repoRoot, '.venv', 'bin', 'python');
+const pythonBin = fs.existsSync(venvPython) ? venvPython : 'python3';
 
 type Event = {
   type: string;
@@ -18,13 +27,12 @@ const App = () => {
 
   useEffect(() => {
     // We launch lucy in print mode with the --ndjson flag.
-    // For demo purposes, we pass a hardcoded prompt or process.argv[2]
     const prompt = process.argv[2] || 'Hello, who are you?';
     setIsQuerying(true);
     setMessages([`> ${prompt}`]);
 
-    const lucyProcess = spawn('python3', ['-m', 'lucy', '--print', prompt, '--ndjson'], {
-      cwd: process.cwd(),
+    const lucyProcess = spawn(pythonBin, ['-m', 'lucy', '--print', prompt, '--ndjson'], {
+      cwd: repoRoot,
     });
 
     const rl = readline.createInterface({

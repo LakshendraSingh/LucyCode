@@ -2,9 +2,12 @@
   "name": "lucy-frontend",
   "version": "1.0.0",
   "description": "Ink-based wrapper for LucyCode",
-  "main": "app.tsx",
+  "type": "module",
+  "main": "app.js",
   "scripts": {
-    "start": "ts-node app.tsx"
+    "build": "tsc",
+    "prestart": "tsc",
+    "start": "node app.js"
   },
   "dependencies": {
     "ink": "^4.4.1",
@@ -12,6 +15,7 @@
     "chalk": "^5.3.0"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
