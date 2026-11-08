@@ -745,7 +745,8 @@ async def _run_goal(
             Panel(
                 f"[bold cyan]🎯 Goal-Driven Autonomous Engine[/bold cyan]\n\n"
                 f"[bold white]{target_display}[/bold white]\n\n"
-                f"[{theme.dim}]Model: {resolved_model} | Auto-Verification: ON | Crash-Recovery: ON[/{theme.dim}]",
+                f"[{theme.dim}]Model: {resolved_model} | Auto-Verification: ON | Crash-Recovery: ON[/{theme.dim}]\n\n"
+                f"[{theme.warning}]Notice:[/{theme.warning}] [{theme.dim}]Lucy is an AI and can make mistakes. Always review generated code and executions.[/{theme.dim}]",
                 border_style="cyan",
             )
         )

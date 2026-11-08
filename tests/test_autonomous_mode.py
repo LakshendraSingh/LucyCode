@@ -192,6 +192,20 @@ class TestAutonomousMode(unittest.TestCase):
         self.assertIn("--auto", result.output)
         self.assertIn("-y", result.output)
 
+    def test_welcome_banner_disclaimer(self):
+        """Verify that the welcome banner at program startup contains the mistake disclaimer."""
+        from io import StringIO
+        from rich.console import Console
+        from lucy.tui.renderer import render_welcome
+
+        buf = StringIO()
+        console = Console(file=buf, color_system=None, width=120)
+        render_welcome(console, "test-model")
+        output = buf.getvalue()
+
+        self.assertIn("Lucy is an AI and can make mistakes", output)
+        self.assertIn("Always review code, diffs, and commands before execution", output)
+
 
 if __name__ == "__main__":
     unittest.main()

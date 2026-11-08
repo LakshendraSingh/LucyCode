@@ -9,6 +9,9 @@
 
 Lucy Code is an autonomous, goal-driven AI coding assistant built from the ground up for speed, reliability, security, and universal model connectivity. Whether you are connected to Google Gemini, OpenAI, DeepSeek, Groq, Anthropic, or running completely offline with Ollama or local GGUF weights, Lucy provides an uncompromising agentic experience that plans, writes, verifies, self-corrects, and executes inside a protected sandbox.
 
+> [!IMPORTANT]
+> **Disclaimer**: Lucy Code is an AI assistant powered by Large Language Models and can make mistakes. Always review generated code, file modifications, and shell commands before execution, particularly when using autonomous modes or granting unrestricted permissions.
+
 ---
 
 ## Key Highlights
@@ -547,6 +550,17 @@ lucycode/
 ├── native/              # C extensions for high-speed file search and diffing
 └── tests/               # Unit and integration test suites
 ```
+
+---
+
+## Disclaimer
+
+Lucy Code is an AI-powered developer tool driven by Large Language Models. While Lucy includes automated verification suites, self-correction heuristics, and sandbox containment, **AI models can make mistakes, hallucinate APIs, misinterpret instructions, or generate unintended code and commands**.
+
+- Always review generated code, file modifications, and terminal commands before running them.
+- Exercise heightened vigilance when running in autonomous modes (`--autonomous`, `--auto`, `-y`, `/autonomous`) or with sandbox protections disabled.
+- Do not execute unverified commands or allow destructive file operations in production or mission-critical environments without human oversight.
+- The authors and contributors assume no liability for any data loss, service disruptions, or damages resulting from the use of this tool.
 
 ---
 

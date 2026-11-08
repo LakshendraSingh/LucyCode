@@ -124,7 +124,9 @@ def render_welcome(console: Console, model: str, theme: Theme | None = None) -> 
                 f"[{theme.dim}]v{__version__}[/{theme.dim}]\n"
                 f"[{theme.dim}]Model: [/{theme.dim}]"
                 f"[{theme.secondary}]{model}[/{theme.secondary}]\n"
-                f"[{theme.dim}]Type /help for commands • Ctrl+C to interrupt • /exit to quit[/{theme.dim}]"
+                f"[{theme.dim}]Type /help for commands • Ctrl+C to interrupt • /exit to quit[/{theme.dim}]\n\n"
+                f"[{theme.warning}]Notice:[/{theme.warning}] "
+                f"[{theme.dim}]Lucy is an AI and can make mistakes. Always review code, diffs, and commands before execution.[/{theme.dim}]"
             ),
             border_style=theme.primary,
             padding=(1, 2),
