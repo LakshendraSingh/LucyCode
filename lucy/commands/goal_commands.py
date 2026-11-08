@@ -42,7 +42,7 @@ class GoalCommand(Command):
 
     @property
     def aliases(self) -> list[str]:
-        return ["goals", "autonomous", "auto"]
+        return ["goals"]
 
     @property
     def description(self) -> str:

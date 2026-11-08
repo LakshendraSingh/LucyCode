@@ -82,3 +82,4 @@ class CompanionCommand(Command):
 def get_commands() -> list[Command]:
     """Return companion command instances."""
     return [CompanionCommand()]
+

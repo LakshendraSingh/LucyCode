@@ -475,7 +475,8 @@ Type `/` in the interactive REPL to trigger system commands:
 | `/sessions` | Save, list, or resume chat sessions    | `/voice`        | Toggle voice transcription               |
 | `/harness`  | LLM evaluation & benchmark suite       | `/harness2`     | Harness² recursive self-improvement      |
 | `/firebase` | Mobile phone remote bridge & alerts    | `/presentation` | Create executive 16:9 presentation decks |
-| `/init`     | Generate a `LUCY.md` prompt for repo   |                 |                                          |
+| `/init`     | Generate a `LUCY.md` prompt for repo   | `/autonomous`   | Toggle autonomous mode (zero prompts)    |
+| `/companion`| Pixel art dog companion in terminal    |                 |                                          |
 
 ---
 
@@ -489,6 +490,8 @@ Type `/` in the interactive REPL to trigger system commands:
 | `--sandbox`                |       | Enable sandbox filesystem containment and safety checks                  |
 | `--sandbox-mode <mode>`    |       | Isolation level: `workspace`, `strict`, or `read_only`                   |
 | `--permission-mode <mode>` |       | Tool permission policy: `prompt`, `auto_accept`, or `read_only`          |
+| `--autonomous`, `--auto`   | `-y`  | Run in autonomous mode (zero mid-task questions or human prompts)        |
+| `--companion`              |       | Launch interactive pixel art dog companion in the terminal               |
 | `--harness [suite]`        |       | Run LLM evaluation benchmarks (`all`, `coding`, `reasoning`)             |
 | `--harness2 [domain]`      |       | Run Harness² recursive self-improvement cycle (`coding`, `debugging`)    |
 | `--firebase`               |       | Start Firebase mobile remote bridge daemon                               |

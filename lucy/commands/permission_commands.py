@@ -45,10 +45,17 @@ class PermissionsCommand(Command):
         if action == "mode":
             if not rest:
                 return CommandResult(output=f"Current mode: {state.permission_mode}\n"
-                                            f"Available: default, auto_accept, plan")
-            if rest in ("default", "auto_accept", "plan"):
-                state.permission_mode = rest
-                return CommandResult(output=f"Permission mode: {rest}")
+                                            f"Available: default, auto_accept, plan, autonomous")
+            if rest in ("default", "auto_accept", "plan", "autonomous"):
+                if rest == "autonomous":
+                    state.autonomous = True
+                    state.permission_mode = "auto_accept"
+                    return CommandResult(output="Permission mode: autonomous (auto-accept + zero mid-task prompts)")
+                else:
+                    if getattr(state, "autonomous", False):
+                        state.autonomous = False
+                    state.permission_mode = rest
+                    return CommandResult(output=f"Permission mode: {rest}")
             return CommandResult(error=f"Unknown mode: {rest}")
 
         if action in ("allow", "deny"):
@@ -66,5 +73,45 @@ class PermissionsCommand(Command):
         return CommandResult(error=f"Unknown action: {action}")
 
 
+class AutonomousCommand(Command):
+    @property
+    def name(self) -> str: return "autonomous"
+    @property
+    def aliases(self) -> list[str]: return ["auto", "no-prompt", "unattended"]
+    @property
+    def description(self) -> str: return "Toggle autonomous mode (never ask user questions mid-task)"
+    @property
+    def usage(self) -> str: return "/autonomous [on|off|status]"
+
+    async def execute(self, args: str, state: Any) -> CommandResult:
+        arg = args.strip().lower()
+        current = getattr(state, "autonomous", False)
+
+        if arg in ("on", "enable", "true", "1"):
+            target = True
+        elif arg in ("off", "disable", "false", "0"):
+            target = False
+        elif arg in ("status", ""):
+            if not arg:
+                target = not current
+            else:
+                status_str = "ENABLED (Auto-accepting actions, zero mid-task prompts)" if current else "DISABLED"
+                return CommandResult(output=f"Autonomous mode: {status_str}")
+        else:
+            return CommandResult(error=f"Usage: {self.usage}")
+
+        state.autonomous = target
+        if target:
+            state.permission_mode = "auto_accept"
+            return CommandResult(
+                output="Autonomous mode ENABLED: Lucy will not ask mid-task questions or pause for confirmations. Actions auto-accepted."
+            )
+        else:
+            state.permission_mode = "default"
+            return CommandResult(
+                output="Autonomous mode DISABLED: Interactive confirmations and prompts restored."
+            )
+
+
 def get_commands() -> list[Command]:
-    return [PermissionsCommand()]
+    return [PermissionsCommand(), AutonomousCommand()]

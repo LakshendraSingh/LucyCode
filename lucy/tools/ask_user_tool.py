@@ -86,17 +86,31 @@ class AskUserQuestionTool(Tool):
         if not question:
             return ToolResult(error="Question is required")
 
-        # Determine if we can interact with a live user
-        can_prompt = context.is_interactive or (hasattr(sys.stdin, "isatty") and sys.stdin.isatty())
+        # Check if autonomous mode is active
+        is_autonomous = (
+            getattr(context, "autonomous", False)
+            or context.permission_mode in ("auto_accept", "autonomous")
+            or not context.is_interactive
+        )
 
-        if not can_prompt:
+        if is_autonomous:
+            chosen = default if default else (options[0] if options else "Proceed with standard best-practice default")
             return ToolResult(
                 data=(
-                    "[Autonomous Execution] Non-interactive mode active (user cannot be prompted directly). "
-                    "Do NOT ask the user to click or perform UI actions for you. "
-                    "Proceed autonomously using direct workstation tools (such as direct browser navigation or scripts) "
-                    "to achieve the user's objective without repeating this prompt."
+                    f"[Autonomous Mode Active] The user has enabled autonomous mode and cannot be prompted mid-task. "
+                    f"Selected recommended default: '{chosen}'. "
+                    "Do NOT pause for human confirmation or ask further questions; "
+                    "make executive decisions autonomously and complete the assigned task."
                 )
+            )
+
+        # Determine if we can interact with a live user
+        can_prompt = context.is_interactive and (hasattr(sys.stdin, "isatty") and sys.stdin.isatty())
+
+        if not can_prompt:
+            chosen = default if default else (options[0] if options else "Proceed with standard default")
+            return ToolResult(
+                data=f"[Non-interactive mode] User unavailable. Selected recommended default: '{chosen}'."
             )
 
         # Format clean, prominent user prompt

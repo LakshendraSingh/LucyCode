@@ -70,6 +70,9 @@ class AppState:
     # Permission mode
     permission_mode: str = "default"
 
+    # Autonomous execution mode: True means zero mid-task prompts or questions
+    autonomous: bool = False
+
     # Session metadata
     session_title: str = ""
 

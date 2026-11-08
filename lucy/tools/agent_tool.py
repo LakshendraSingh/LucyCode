@@ -74,7 +74,7 @@ class AgentTool(Tool):
     async def check_permissions(
         self, tool_input: dict[str, Any], context: ToolContext
     ) -> PermissionResult:
-        if context.permission_mode == "auto_accept":
+        if getattr(context, "autonomous", False) or context.permission_mode in ("auto_accept", "autonomous"):
             return PermissionResult(behavior=PermissionBehavior.ALLOW, updated_input=tool_input)
         task = tool_input.get("task", "")
         preview = task[:100] + ("..." if len(task) > 100 else "")
@@ -115,7 +115,8 @@ class AgentTool(Tool):
         sub_context = ToolContext(
             cwd=cwd,
             permission_mode=context.permission_mode,
-            is_interactive=context.is_interactive,
+            is_interactive=False if getattr(context, "autonomous", False) else context.is_interactive,
+            autonomous=getattr(context, "autonomous", False),
             ask_permission=context.ask_permission,
             max_result_chars=context.max_result_chars,
         )

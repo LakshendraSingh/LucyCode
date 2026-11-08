@@ -70,7 +70,7 @@ class WebFetchTool(Tool):
     }
 
     async def check_permissions(self, tool_input: dict[str, Any], context: ToolContext) -> PermissionResult:
-        if context.permission_mode == "auto_accept":
+        if getattr(context, "autonomous", False) or context.permission_mode in ("auto_accept", "autonomous"):
             return PermissionResult(behavior=PermissionBehavior.ALLOW, updated_input=tool_input)
 
         url = tool_input.get("url", "")

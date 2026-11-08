@@ -44,11 +44,11 @@ class RuleEngine:
     def check(self, tool_name: str, command: str = "", path: str = "",
               permission_mode: str = "default") -> PermissionCheck:
         """Check if an action is allowed."""
-        # Auto-accept mode
-        if permission_mode == "auto_accept":
+        # Auto-accept / Autonomous mode
+        if permission_mode in ("auto_accept", "autonomous"):
             return PermissionCheck(
                 decision=PermissionDecision.ALLOWED,
-                explanation="Auto-accept mode",
+                explanation="Autonomous auto-accept mode",
                 tool_name=tool_name,
                 command=command,
                 path=path,

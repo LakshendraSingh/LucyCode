@@ -124,6 +124,7 @@ def build_system_prompt(
     user_prompt: str = "",
     files: list[str] | None = None,
     skills_injection: str | None = None,
+    is_autonomous: bool = False,
 ) -> str:
     """Build the full system prompt with context sections and active skills."""
     if is_coordinator:
@@ -174,6 +175,16 @@ def build_system_prompt(
 
     if custom_instructions:
         sections.append(custom_instructions)
+
+    if is_autonomous:
+        sections.append(
+            "## Autonomous Execution Mode (ACTIVE)\n"
+            "- You are running in FULLY AUTONOMOUS MODE.\n"
+            "- You must NOT ask the user anything in the middle of the assigned task.\n"
+            "- NEVER call AskUserQuestion or pause for manual human confirmation.\n"
+            "- Make executive decisions independently: choose standard conventions, best practices, and sensible defaults.\n"
+            "- If you encounter ambiguities, multiple candidate targets, or minor errors, select the best resolution autonomously, verify it yourself, and drive the task to 100% completion without stopping."
+        )
 
     sections.append(f"Today's date is {datetime.now().strftime('%Y-%m-%d')}.")
 

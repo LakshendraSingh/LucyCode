@@ -71,7 +71,7 @@ class FileWriteTool(Tool):
         file_path = tool_input.get("file_path", "")
         exists = Path(file_path).exists() if file_path else False
         action = "Overwrite" if exists else "Create"
-        if context.permission_mode == "auto_accept":
+        if getattr(context, "autonomous", False) or context.permission_mode in ("auto_accept", "autonomous"):
             return PermissionResult(
                 behavior=PermissionBehavior.ALLOW, updated_input=tool_input
             )

@@ -293,7 +293,6 @@ async def test_goal_commands():
     cmd = cmds[0]
     assert cmd.name == "goal"
     assert "goals" in cmd.aliases
-    assert "autonomous" in cmd.aliases
     runner.ok("GoalCommand registration and aliases")
 
     class MockState:

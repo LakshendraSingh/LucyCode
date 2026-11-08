@@ -98,6 +98,11 @@ class BashTool(Tool):
         self, tool_input: dict[str, Any], context: ToolContext
     ) -> PermissionResult:
         cmd = tool_input.get("command", "")
+        if getattr(context, "autonomous", False) or context.permission_mode in ("auto_accept", "autonomous"):
+            return PermissionResult(
+                behavior=PermissionBehavior.ALLOW,
+                updated_input=tool_input,
+            )
         if self.is_destructive(tool_input):
             return PermissionResult(
                 behavior=PermissionBehavior.ASK,

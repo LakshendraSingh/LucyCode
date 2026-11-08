@@ -148,6 +148,7 @@ async def _run_repl(
     parallel_tools: bool = True,
     sandbox: bool = False,
     sandbox_mode: str | None = None,
+    autonomous: bool = False,
 ) -> None:
     """Run the interactive REPL."""
     from rich.live import Live
@@ -196,11 +197,14 @@ async def _run_repl(
     await _initialize_mcp()
 
     # Initialize state
+    is_auto = autonomous or config.autonomous or (permission_mode in ("auto_accept", "autonomous"))
+    effective_permission_mode = "auto_accept" if is_auto else (permission_mode or config.permission_mode)
     session_id = resume_session or str(uuid.uuid4())
     state = AppState(
         model=resolved_model,
         conversation_id=session_id,
-        permission_mode=permission_mode or config.permission_mode,
+        permission_mode=effective_permission_mode,
+        autonomous=is_auto,
     )
 
     # Resume session if requested
@@ -222,6 +226,7 @@ async def _run_repl(
         lucymd=lucymd,
         is_coordinator=is_coordinator,
         is_assistant=is_assistant,
+        is_autonomous=is_auto,
     )
 
     # Fire SessionStart hook
@@ -236,7 +241,8 @@ async def _run_repl(
     tool_context = ToolContext(
         cwd=state.cwd,
         permission_mode=state.permission_mode,
-        is_interactive=True,
+        autonomous=is_auto,
+        is_interactive=not is_auto,
         ask_permission=lambda name, desc: _ask_permission(console, name, desc, theme),
     )
 
@@ -250,6 +256,8 @@ async def _run_repl(
 
     # Welcome
     render_welcome(console, resolved_model, theme)
+    if is_auto:
+        render_info(console, "⚡ Autonomous Mode: ACTIVE (zero mid-task confirmations or prompts)")
     if sandbox_mgr.is_enabled:
         render_info(console, f"🔒 Sandbox Active: {sandbox_mgr.config.profile.value.upper()} profile (filesystem constrained to workspace)")
 
@@ -344,6 +352,17 @@ async def _run_repl(
             # Reset abort
             abort_event.clear()
 
+            # Synchronize autonomous mode
+            current_auto = getattr(state, "autonomous", False) or getattr(tool_context, "autonomous", False) or state.permission_mode in ("auto_accept", "autonomous")
+            state.autonomous = current_auto
+            tool_context.autonomous = current_auto
+            if current_auto:
+                tool_context.permission_mode = "auto_accept"
+                tool_context.is_interactive = False
+            else:
+                tool_context.permission_mode = state.permission_mode
+                tool_context.is_interactive = True
+
             # Query
             system_prompt = build_system_prompt(
                 cwd=state.cwd,
@@ -352,6 +371,7 @@ async def _run_repl(
                 is_coordinator=is_coordinator,
                 is_assistant=is_assistant,
                 user_prompt=user_input,
+                is_autonomous=current_auto,
             )
             registry = get_tool_registry()
             params = QueryParams(
@@ -566,6 +586,8 @@ async def _run_print(
     parallel_tools: bool = True,
     sandbox: bool = False,
     sandbox_mode: str | None = None,
+    autonomous: bool = False,
+    permission_mode: str | None = None,
 ) -> None:
     """Run in non-interactive (--print) mode."""
     from lucy.api.models import resolve_model
@@ -581,7 +603,14 @@ async def _run_print(
     console = create_console()
     resolved_model = resolve_model(model or config.model)
 
-    state = AppState(model=resolved_model, is_non_interactive=True)
+    is_auto = autonomous or config.autonomous or (permission_mode in ("auto_accept", "autonomous"))
+    effective_permission_mode = "auto_accept" if is_auto else (permission_mode or "auto_accept")
+    state = AppState(
+        model=resolved_model,
+        is_non_interactive=True,
+        autonomous=is_auto,
+        permission_mode=effective_permission_mode,
+    )
 
     git_status = await get_git_status(state.cwd)
     lucymd = get_lucymd_content(state.cwd)
@@ -592,12 +621,14 @@ async def _run_print(
         is_coordinator=is_coordinator,
         is_assistant=is_assistant,
         user_prompt=prompt,
+        is_autonomous=is_auto,
     )
 
     tool_context = ToolContext(
         cwd=state.cwd,
-        permission_mode="auto_accept",
-        is_interactive=sys.stdin.isatty() if hasattr(sys.stdin, "isatty") else False,
+        permission_mode=effective_permission_mode,
+        autonomous=is_auto,
+        is_interactive=False if is_auto else (sys.stdin.isatty() if hasattr(sys.stdin, "isatty") else False),
     )
 
     from lucy.core.sandbox import get_sandbox_manager
@@ -697,7 +728,8 @@ async def _run_goal(
     tool_context = ToolContext(
         cwd=os.getcwd(),
         permission_mode=permission_mode or "auto_accept",
-        is_interactive=True,
+        autonomous=True,
+        is_interactive=False,
     )
 
     sandbox_mgr = get_sandbox_manager()
@@ -907,7 +939,8 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("-m", "--model", default=None, help="Model to use (e.g. sonnet, opus, haiku)")
 @click.option("-v", "--verbose", is_flag=True, help="Show verbose output (thinking, tool results)")
 @click.option("--version", is_flag=True, help="Show version")
-@click.option("--permission-mode", default=None, type=click.Choice(["default", "auto_accept", "plan"]))
+@click.option("-y", "--yes", "--auto", "--autonomous", "autonomous", is_flag=True, default=False, help="Run in autonomous mode (never ask user questions or confirmations mid-task)")
+@click.option("--permission-mode", default=None, type=click.Choice(["default", "auto_accept", "plan", "autonomous"]))
 @click.option("--resume", default=None, help="Resume a previous session by ID")
 @click.option("--list-sessions", "list_sessions_flag", is_flag=True, help="List recent sessions")
 @click.option("--ndjson", is_flag=True, help="Emit output as NDJSON lines (IPC only)")
@@ -931,6 +964,7 @@ def cli(
     model: str | None,
     verbose: bool,
     version: bool,
+    autonomous: bool,
     permission_mode: str | None,
     resume: str | None,
     list_sessions_flag: bool,
@@ -955,6 +989,11 @@ def cli(
     if version:
         click.echo(f"Lucy Code v{__version__}")
         return
+
+    # Normalize autonomous mode
+    if autonomous or permission_mode == "autonomous":
+        autonomous = True
+        permission_mode = "auto_accept"
 
     # Pixel Art Dog Companion mode
     if companion or (initial_prompt and len(initial_prompt) == 1 and initial_prompt[0] in ("companion", "pet", "dog")):
@@ -1027,16 +1066,40 @@ def cli(
             resume_goal_id=resume_goal,
             model=model,
             verbose=verbose,
-            permission_mode=permission_mode,
+            permission_mode=permission_mode or "auto_accept",
             ndjson=ndjson,
             sandbox=sandbox,
             sandbox_mode=sandbox_mode,
         ))
     elif prompt is not None:
-        asyncio.run(_run_print(prompt=prompt, model=model, verbose=verbose, ndjson=ndjson, is_coordinator=coordinator, is_assistant=assistant, parallel_tools=parallel_tools, sandbox=sandbox, sandbox_mode=sandbox_mode))
+        asyncio.run(_run_print(
+            prompt=prompt,
+            model=model,
+            verbose=verbose,
+            ndjson=ndjson,
+            is_coordinator=coordinator,
+            is_assistant=assistant,
+            parallel_tools=parallel_tools,
+            sandbox=sandbox,
+            sandbox_mode=sandbox_mode,
+            autonomous=autonomous,
+            permission_mode=permission_mode,
+        ))
     elif initial_prompt:
         # Joined positional args as prompt for print mode
-        asyncio.run(_run_print(prompt=" ".join(initial_prompt), model=model, verbose=verbose, ndjson=ndjson, is_coordinator=coordinator, is_assistant=assistant, parallel_tools=parallel_tools, sandbox=sandbox, sandbox_mode=sandbox_mode))
+        asyncio.run(_run_print(
+            prompt=" ".join(initial_prompt),
+            model=model,
+            verbose=verbose,
+            ndjson=ndjson,
+            is_coordinator=coordinator,
+            is_assistant=assistant,
+            parallel_tools=parallel_tools,
+            sandbox=sandbox,
+            sandbox_mode=sandbox_mode,
+            autonomous=autonomous,
+            permission_mode=permission_mode,
+        ))
     else:
         asyncio.run(_run_repl(
             model=model,
@@ -1048,6 +1111,7 @@ def cli(
             parallel_tools=parallel_tools,
             sandbox=sandbox,
             sandbox_mode=sandbox_mode,
+            autonomous=autonomous,
         ))
 
 

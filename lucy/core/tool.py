@@ -68,6 +68,8 @@ class ToolContext:
     cwd: str = ""
     # Permission mode: 'default' | 'auto_accept' | 'plan'
     permission_mode: str = "default"
+    # Autonomous execution mode: True means zero mid-task prompting or confirmation
+    autonomous: bool = False
     # Whether user interaction is available (False in --print mode)
     is_interactive: bool = True
     # Abort signal

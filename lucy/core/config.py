@@ -54,6 +54,7 @@ class Config:
     verbose: bool = False
     debug: bool = False
     permission_mode: str = "default"  # default | auto_accept | plan
+    autonomous: bool = False  # If True, never ask user questions or pause mid-task
     thinking_enabled: bool = True
     sandbox: bool = False
     sandbox_mode: str = "workspace"  # workspace | strict | read_only
@@ -133,6 +134,7 @@ def load_config(
         "LUCY_DEBUG": ("debug", _str_to_bool),
         "LUCY_THEME": "theme",
         "LUCY_PERMISSION_MODE": "permission_mode",
+        "LUCY_AUTONOMOUS": ("autonomous", _str_to_bool),
         "LUCY_SANDBOX": ("sandbox", _str_to_bool),
         "LUCY_SANDBOX_MODE": "sandbox_mode",
         "HTTP_PROXY": "http_proxy",
@@ -202,6 +204,7 @@ def save_config(config: Config) -> None:
         "max_tokens": config.max_tokens,
         "theme": config.theme,
         "permission_mode": config.permission_mode,
+        "autonomous": config.autonomous,
         "thinking_enabled": config.thinking_enabled,
         "show_cost": config.show_cost,
         "show_tokens": config.show_tokens,
