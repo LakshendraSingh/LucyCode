@@ -659,5 +659,5 @@ Lucy Code is an AI-powered developer tool driven by Large Language Models. While
 ---
 
 <p align="center">
-  <b>Lucy Code</b> — Built for the future of autonomous software and engineering.
+  <b>Lucy Code</b> — Built with ❤️ for the future of autonomous software and engineering.
 </p>
