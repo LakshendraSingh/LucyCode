@@ -1003,7 +1003,7 @@ def cli(
     # Pixel Art Dog Companion mode
     if companion or (initial_prompt and len(initial_prompt) == 1 and initial_prompt[0] in ("companion", "pet", "dog")):
         from lucy.tui.companion import DogCompanion
-        comp = DogCompanion(name="Pixel")
+        comp = DogCompanion(name="Lucy")
         comp.run_interactive()
         return
 

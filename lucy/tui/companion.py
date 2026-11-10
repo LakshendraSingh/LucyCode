@@ -384,7 +384,7 @@ def render_sprite_lines(sprite_name: str) -> list[str]:
 
 @dataclass
 class CompanionState:
-    name: str = "Pixel"
+    name: str = "Lucy"
     happiness: int = 100
     energy: int = 100
     treats: int = 3
@@ -397,7 +397,7 @@ class CompanionState:
 class DogCompanion:
     """Terminal pixel art dog companion with animations and interactions."""
 
-    def __init__(self, name: str = "Pixel"):
+    def __init__(self, name: str = "Lucy"):
         self.state = CompanionState(name=name)
 
     def pet(self) -> str:
@@ -598,7 +598,7 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="LucyCode Pixel Art Dog Companion")
-    parser.add_argument("--name", default="Pixel", help="Companion name")
+    parser.add_argument("--name", default="Lucy", help="Companion name")
     parser.add_argument("--say", default=None, help="Message for companion to say")
     parser.add_argument("--mood", default=None, choices=["idle", "happy", "bark", "sleep", "treat"])
     parser.add_argument("--static", action="store_true", help="Print single frame and exit (no animation loop)")

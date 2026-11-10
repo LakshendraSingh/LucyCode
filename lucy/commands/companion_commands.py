@@ -20,7 +20,7 @@ def _get_companion():
     global _GLOBAL_COMPANION
     if _GLOBAL_COMPANION is None:
         from lucy.tui.companion import DogCompanion
-        _GLOBAL_COMPANION = DogCompanion(name="Pixel")
+        _GLOBAL_COMPANION = DogCompanion(name="Lucy")
     return _GLOBAL_COMPANION
 
 

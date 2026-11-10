@@ -43,12 +43,13 @@ class TestDogCompanion(unittest.TestCase):
 
     def test_companion_actions_and_state(self):
         """Test pet, feed, bark, and sleep actions."""
-        dog = DogCompanion(name="Pixel")
+        dog = DogCompanion(name="Lucy")
 
         # 1. Initial State
         self.assertEqual(dog.state.happiness, 100)
         self.assertEqual(dog.state.energy, 100)
         self.assertEqual(dog.state.mood, "idle")
+        self.assertEqual(dog.state.name, "Lucy")
 
         # 2. Pet
         pet_msg = dog.pet()
@@ -78,9 +79,9 @@ class TestDogCompanion(unittest.TestCase):
 
     def test_render_tui(self):
         """Verify render_tui returns formatted terminal string with stats."""
-        dog = DogCompanion(name="Pixel")
+        dog = DogCompanion(name="Lucy")
         output = dog.render_tui()
-        self.assertIn("Pixel", output)
+        self.assertIn("Lucy", output)
         self.assertIn("Happiness", output)
         self.assertIn("Energy", output)
         self.assertIn("Controls:", output)
@@ -95,11 +96,11 @@ class TestDogCompanion(unittest.TestCase):
         async def _run_cmd_tests():
             # 1. Default render
             res_default = await cmd.execute("", None)
-            self.assertIn("Pixel", res_default.output)
+            self.assertIn("Lucy", res_default.output)
 
             # 2. /companion pet
             res_pet = await cmd.execute("pet", None)
-            self.assertIn("Pixel", res_pet.output)
+            self.assertIn("Lucy", res_pet.output)
 
             # 3. /companion feed
             res_feed = await cmd.execute("feed", None)
@@ -107,7 +108,7 @@ class TestDogCompanion(unittest.TestCase):
 
             # 4. /companion bark
             res_bark = await cmd.execute("bark", None)
-            self.assertIn("Pixel", res_bark.output)
+            self.assertIn("Lucy", res_bark.output)
 
             # 5. /companion say Hello Dev
             res_say = await cmd.execute("say Hello Dev", None)

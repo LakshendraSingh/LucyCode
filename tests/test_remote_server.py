@@ -77,7 +77,7 @@ class TestRemoteServerUnit(unittest.IsolatedAsyncioTestCase):
         output = bytes(writer.data)
         self.assertIn(b"HTTP/1.1 200 OK", output)
         self.assertIn(b"Lucy Code", output)
-        self.assertIn(b"Pixel", output)
+        self.assertIn(b"Lucy", output)
 
     async def test_websocket_handshake(self):
         """WebSocket upgrade request completes 101 Switching Protocols with valid accept key."""
@@ -132,7 +132,7 @@ class TestRemoteServerUnit(unittest.IsolatedAsyncioTestCase):
 
         comp_res = await self.server._handle_query({"prompt": "/companion"}, session)
         self.assertEqual(comp_res.get("status"), "success")
-        self.assertIn("Pixel", comp_res.get("response", ""))
+        self.assertIn("Lucy", comp_res.get("response", ""))
 
         clear_res = await self.server._handle_query({"prompt": "/clear"}, session)
         self.assertEqual(clear_res.get("status"), "success")

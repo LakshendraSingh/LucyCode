@@ -425,9 +425,9 @@ body {
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
         <!-- Pixel Art Dog Companion Widget in Header -->
-        <button id="companionPill" onclick="toggleCompanionPanel()" title="Toggle Pixel Dog Companion" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:18px;padding:3px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text);font-size:12px;transition:background 0.2s, border-color 0.2s;">
+        <button id="companionPill" onclick="toggleCompanionPanel()" title="Toggle Lucy Dog Companion" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:18px;padding:3px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text);font-size:12px;transition:background 0.2s, border-color 0.2s;">
             <canvas id="headerDogCanvas" class="pixel-canvas" width="24" height="24" style="border-radius:4px;"></canvas>
-            <span style="font-weight:600;font-size:12px;color:#dea964;">Pixel</span>
+            <span style="font-weight:600;font-size:12px;color:#dea964;">Lucy</span>
         </button>
         <div style="display:flex;align-items:center;gap:6px;">
             <span id="statusText" style="font-size:12px;color:var(--text-dim);">Disconnected</span>
@@ -438,12 +438,12 @@ body {
 
 <!-- Interactive Pixel Art Dog Companion Playground Panel -->
 <div id="companionPanel" class="companion-panel">
-    <div class="companion-canvas-box" onclick="petCompanion()" title="Click Pixel to Pet!">
+    <div class="companion-canvas-box" onclick="petCompanion()" title="Click Lucy to Pet!">
         <canvas id="companionCanvas" class="pixel-canvas" width="96" height="96"></canvas>
     </div>
     <div class="companion-info">
         <div class="companion-bubble" id="companionBubble">
-            🐶 <strong>Pixel:</strong> Woof! I'm your terminal & web companion. Ready to help you code!
+            🐶 <strong>Lucy:</strong> Woof! I'm your terminal & web companion. Ready to help you code!
         </div>
         <div class="companion-stats">
             <span>❤️ Happiness: <strong id="compHappiness" style="color:#ef4444;">100%</strong></span>
@@ -473,7 +473,7 @@ body {
     <button onclick="quickSend('/help')" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-dim);border-radius:12px;padding:3px 10px;font-size:11px;cursor:pointer;white-space:nowrap;">/help</button>
     <button onclick="quickSend('/tools')" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-dim);border-radius:12px;padding:3px 10px;font-size:11px;cursor:pointer;white-space:nowrap;">/tools</button>
     <button onclick="quickSend('/status')" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-dim);border-radius:12px;padding:3px 10px;font-size:11px;cursor:pointer;white-space:nowrap;">/status</button>
-    <button onclick="toggleCompanionPanel()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-dim);border-radius:12px;padding:3px 10px;font-size:11px;cursor:pointer;white-space:nowrap;">🐶 Pixel Companion</button>
+    <button onclick="toggleCompanionPanel()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-dim);border-radius:12px;padding:3px 10px;font-size:11px;cursor:pointer;white-space:nowrap;">🐶 Lucy Companion</button>
 </div>
 
 <!-- Attachment Preview Chips -->
@@ -495,7 +495,7 @@ body {
         <span class="tb-icon">📎</span>Upload
     </button>
     <button onclick="toggleCompanionPanel()">
-        <span class="tb-icon">🐶</span>Pixel
+        <span class="tb-icon">🐶</span>Lucy
     </button>
     <button onclick="reconnect()">
         <span class="tb-icon">🔄</span>Reconnect
@@ -747,7 +747,7 @@ const SPRITES = {
 
 // Companion State
 const companionState = {
-    name: "Pixel",
+    name: "Lucy",
     mood: "idle",       // idle, happy, bark, sleep, treat
     happiness: 100,
     energy: 100,
@@ -760,11 +760,11 @@ const companionState = {
 
 const COMPANION_TIPS = [
     "Commit early, commit often, and keep unit tests green! 🐾",
-    "Pixel loves clean code, descriptive commits, and fast test suites! 🐶",
+    "Lucy loves clean code, descriptive commits, and fast test suites! 🐶",
     "Did you know? You can run me directly in your terminal with 'lucy --companion'! 🦴",
     "*nuzzles your knee* Take a quick stretch and drink some water! 💧",
     "Use 'lucy --autonomous' when you want Lucy to handle tasks without interruption!",
-    "Zero errors in tests makes Pixel's tail wag at maximum speed! ⚡",
+    "Zero errors in tests makes Lucy's tail wag at maximum speed! ⚡",
     "Arf! Try dragging code files directly into this chat window to analyze them! 📂"
 ];
 
@@ -851,7 +851,7 @@ function petCompanion() {
     companionState.isSleeping = false;
     companionState.mood = 'happy';
     companionState.lastMoodChange = Date.now();
-    companionState.message = "*panting happily & tail wagging* Woof! Pixel loves you! ❤️";
+    companionState.message = "*panting happily & tail wagging* Woof! Lucy loves you! ❤️";
     updateCompanionUI();
 }
 
@@ -881,10 +881,10 @@ function toggleSleepCompanion() {
     if (companionState.isSleeping) {
         companionState.mood = 'sleep';
         companionState.energy = Math.min(100, companionState.energy + 20);
-        companionState.message = "Zzz... Pixel is taking a cozy developer nap... 💤";
+        companionState.message = "Zzz... Lucy is taking a cozy developer nap... 💤";
     } else {
         companionState.mood = 'idle';
-        companionState.message = "Yawn! Pixel is awake and ready to pair program! ⚡";
+        companionState.message = "Yawn! Lucy is awake and ready to pair program! ⚡";
     }
     updateCompanionUI();
 }

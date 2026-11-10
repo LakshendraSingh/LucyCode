@@ -474,7 +474,7 @@ Lucy Code includes an integrated browser portal served locally over HTTP and RFC
 - **Full Agentic Execution**: Directly prompts Lucy with access to all 40+ developer tools, slash commands, and multi-turn conversational memory.
 - **Drag-and-Drop File Uploads**: Drag any source file, document, or archive directly into the browser chat window, or use the attachment button (`lucy/services/mobile_web/index.html`). Files are stored in your workspace `uploads/` directory and injected into Lucy's prompt context.
 - **RFC 6455 WebSocket Bridge**: Pure-Python, zero-dependency streaming WebSocket protocol handling real-time tool execution notifications, text streaming, and automatic reconnects.
-- **Interactive Companion Widget**: Features an authentic 24x24 pixel art dog companion ("Pixel") rendered directly on an HTML5 canvas with live pet, feed, bark, and sleep actions.
+- **Interactive Companion Widget**: Features an authentic 24x24 pixel art dog companion ("Lucy") rendered directly on an HTML5 canvas with live pet, feed, bark, and sleep actions.
 
 ### Running the Web Server
 
@@ -499,7 +499,7 @@ Lucy Code includes an authentic, retro 24-bit TrueColor pixel art companion name
 - **Procedural Pixel Art**: 24x24 sprite engine rendered via Unicode half-blocks (`▀` / `▄`) with 24-bit TrueColor palette support.
 - **Continuous Animation Loop**: Tail wagging, breathing idle cycles, blinking, and sleep animations.
 - **Interactive Controls**:
-  - `P` or Space: Pet Pixel (increases happiness, displays heart thought bubble).
+  - `P` or Space: Pet Lucy (increases happiness, displays heart thought bubble).
   - `F` or `T`: Feed a bone treat.
   - `B`: Bark and deliver random developer advice and coding wisdom.
   - `S`: Toggle nap / sleep mode.
@@ -660,7 +660,7 @@ lucycode/
 │   │       ├── index.html      # Mobile web app with companion & file upload
 │   │       └── firebase_app.html
 │   ├── skills/          # Built-in SKILL.md definition packs
-│   ├── tui/             # Terminal UI renderer & Pixel companion sprite engine
+│   ├── tui/             # Terminal UI renderer & Lucy companion sprite engine
 │   │   └── companion.py # 24-bit TrueColor pixel art companion
 │   └── tools/           # Filesystem, bash, web, workstation, and AST tools
 ├── native/              # C extensions for high-speed file search and diffing
