@@ -23,24 +23,33 @@ class WeightsProvider:
     """Dispatcher for direct model weight loading."""
 
     def __init__(self, model_path: str):
-        self.model_path = os.path.abspath(model_path)
+        self.model_path = os.path.abspath(os.path.expanduser(model_path))
 
     def _get_impl(self):
         """Detect model type and return appropriate provider implementation from cache."""
         if self.model_path in _MODEL_CACHE:
             return _MODEL_CACHE[self.model_path]
 
+        if not os.path.exists(self.model_path):
+            raise FileNotFoundError(f"Model weights path does not exist: {self.model_path}")
+
         impl: Any = None
-        # Detect Hugging Face directory
+        # Detect Hugging Face directory or safetensors file
         if os.path.isdir(self.model_path):
             hf_markers = ["config.json", "model.safetensors", "pytorch_model.bin", "tokenizer_config.json"]
             if any(os.path.exists(os.path.join(self.model_path, m)) for m in hf_markers):
                 impl = TransformersProvider(self.model_path)
-        
+        elif self.model_path.endswith((".safetensors", ".bin")):
+            parent_dir = os.path.dirname(self.model_path)
+            if any(os.path.exists(os.path.join(parent_dir, m)) for m in ["config.json", "tokenizer_config.json"]):
+                impl = TransformersProvider(parent_dir)
+            else:
+                impl = TransformersProvider(self.model_path)
+
         if not impl:
             # Default to GGUF
             impl = GGUFProvider(self.model_path)
-            
+
         _MODEL_CACHE[self.model_path] = impl
         return impl
 
@@ -72,7 +81,10 @@ class GGUFProvider:
         try:
             from llama_cpp import Llama
         except ImportError:
-            raise ImportError("llama-cpp-python not installed. Run: pip install lucycode[local]")
+            raise ImportError(
+                "llama-cpp-python is required to run GGUF weights directly. "
+                "Install with: pip install llama-cpp-python (or pip install lucycode[local])"
+            )
 
         n_gpu_layers = kwargs.get("n_gpu_layers", -1 if "METAL" in os.environ or "CUDA" in os.environ else 0)
         self._llm = Llama(
@@ -87,6 +99,7 @@ class GGUFProvider:
     async def stream(self, messages, system_prompt, **kwargs):
         loop = asyncio.get_running_loop()
         api_messages = [{"role": "system", "content": system_prompt}] + messages
+        abort_signal = kwargs.get("abort_signal")
 
         def sync_stream():
             llm = self._get_llm(**kwargs)
@@ -100,6 +113,9 @@ class GGUFProvider:
         stream_iter = await loop.run_in_executor(None, sync_stream)
         full_text = ""
         for chunk in stream_iter:
+            if abort_signal and abort_signal.is_set():
+                yield {"type": "error", "error": "Request cancelled by user"}
+                return
             content = chunk["choices"][0].get("delta", {}).get("content", "")
             if content:
                 full_text += content
@@ -141,8 +157,14 @@ class TransformersProvider:
 
     def _load(self):
         if self._model: return
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+        try:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+        except ImportError:
+            raise ImportError(
+                "torch and transformers are required to run Hugging Face / Safetensors weights directly. "
+                "Install with: pip install torch transformers"
+            )
         
         device = "cpu"
         if torch.backends.mps.is_available():
@@ -245,6 +267,7 @@ class TransformersProvider:
 
         full_text = ""
         loop = asyncio.get_running_loop()
+        abort_signal = kwargs.get("abort_signal")
         
         # Async-friendly iteration over the streamer
         def get_next():
@@ -254,6 +277,9 @@ class TransformersProvider:
                 return None
 
         while thread.is_alive() or not streamer.text_queue.empty():
+            if abort_signal and abort_signal.is_set():
+                yield {"type": "error", "error": "Request cancelled by user"}
+                return
             new_text = await loop.run_in_executor(None, get_next)
             if new_text is None:
                 break

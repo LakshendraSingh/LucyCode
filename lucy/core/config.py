@@ -85,6 +85,7 @@ class Config:
     fireworks_api_key: str = ""
     ollama_host: str = ""
     llamacpp_host: str = ""
+    weights_path: str = ""
 
 
 def load_config(
@@ -155,6 +156,8 @@ def load_config(
         "OPENROUTER_API_KEY": "openrouter_api_key",
         "TOGETHER_API_KEY": "together_api_key",
         "FIREWORKS_API_KEY": "fireworks_api_key",
+        "LUCY_WEIGHTS": "weights_path",
+        "MODEL_WEIGHTS": "weights_path",
     }
 
     for env_key, target in env_map.items():
@@ -172,7 +175,9 @@ def load_config(
 
     # Auto-detect: if no Anthropic key and default model is still active, pick an available provider
     if not config.api_key and config.model == DEFAULT_MODEL:
-        if config.openai_api_key:
+        if config.weights_path:
+            config.model = f"weights:{os.path.abspath(os.path.expanduser(config.weights_path))}"
+        elif config.openai_api_key:
             config.model = "openai:gpt-4o"
         elif config.gemini_api_key or config.google_api_key:
             config.model = "gemini:gemini-2.5-flash"
@@ -209,6 +214,7 @@ def save_config(config: Config) -> None:
         "show_cost": config.show_cost,
         "show_tokens": config.show_tokens,
         "verbose": config.verbose,
+        "weights_path": config.weights_path,
     }
     with open(CONFIG_FILE, "w") as f:
         json.dump(data, f, indent=2)

@@ -937,7 +937,8 @@ def _tool_summary(name: str, inp: dict) -> str:
 
 @click.command()
 @click.option("-p", "--prompt", "--print", "prompt", default=None, help="Run non-interactively with a prompt")
-@click.option("-m", "--model", default=None, help="Model to use (e.g. sonnet, opus, haiku)")
+@click.option("-m", "--model", default=None, help="Model to use (e.g. sonnet, opus, haiku, or weights:<path>)")
+@click.option("-w", "--weights", default=None, help="Direct path to model weights (GGUF file or Safetensors directory) for local offline execution")
 @click.option("-v", "--verbose", is_flag=True, help="Show verbose output (thinking, tool results)")
 @click.option("--version", is_flag=True, help="Show version")
 @click.option("-y", "--yes", "--auto", "--autonomous", "autonomous", is_flag=True, default=False, help="Run in autonomous mode (never ask user questions or confirmations mid-task)")
@@ -988,12 +989,21 @@ def cli(
     firebase: bool,
     companion: bool,
     web_server: bool,
+    weights: str | None,
     initial_prompt: tuple[str, ...],
 ):
     """Lucy Code — AI-powered coding assistant in your terminal."""
     if version:
         click.echo(f"Lucy Code v{__version__}")
         return
+
+    # Direct model weights execution
+    if weights:
+        expanded_weights = os.path.abspath(os.path.expanduser(weights))
+        if not os.path.exists(expanded_weights):
+            click.echo(f"Error: Model weights path not found: {expanded_weights}", err=True)
+            return
+        model = f"weights:{expanded_weights}"
 
     # Normalize autonomous mode
     if autonomous or permission_mode == "autonomous":

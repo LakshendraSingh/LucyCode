@@ -119,8 +119,14 @@ No API keys or cloud access required:
 # With Ollama running locally:
 lucy --model ollama:llama3.1
 
-# Or point directly to local GGUF weights:
-lucy --model weights:/path/to/llama-3-8b.gguf
+# Connect directly to local model weights (GGUF or Hugging Face Safetensors):
+lucy --weights /path/to/llama-3-8b.gguf
+# Or use the short flag:
+lucy -w ./models/phi-3-mini
+
+# Or inside the interactive shell:
+/weights ~/models/llama-3.2-3b-instruct.Q4_K_M.gguf
+/weights ./models/deepseek-r1-distill-qwen-7b
 ```
 
 ---
@@ -568,7 +574,8 @@ Type `/` in the interactive REPL to trigger system commands:
 | `/goal`      | Autonomous goal planning & execution   | `/automate`     | Workstation & workflow automation        |
 | `/skills`    | Browse and toggle agent skills         | `/sandbox`      | Manage sandbox isolation levels          |
 | `/model`     | Switch model/provider on the fly       | `/plan`         | Create or view execution plan            |
-| `/cost`      | Token usage & cost analytics           | `/status`       | System health & usage stats              |
+| `/weights`   | Connect directly to model weights      | `/cost`         | Token usage & cost analytics             |
+| `/status`    | System health & usage stats            | `/automate`     | Workstation & workflow automation        |
 | `/doctor`    | Run comprehensive system diagnostics   | `/memory`       | Semantic memory inspection               |
 | `/mcp`       | Inspect & manage MCP servers           | `/revert`       | Revert / undo changes (`/revert all`)    |
 | `/dream`     | Proactive background codebase indexing | `/tasks`        | View running background tasks            |
@@ -586,6 +593,7 @@ Type `/` in the interactive REPL to trigger system commands:
 | Flag                       | Short | Description                                                              |
 | :------------------------- | :---- | :----------------------------------------------------------------------- |
 | `--model <name>`           | `-m`  | Model specifier (`gemini`, `openai:gpt-4o`, `deepseek:r1`, `ollama:...`) |
+| `--weights <path>`         | `-w`  | Connect directly to model weights (GGUF file or Safetensors directory)   |
 | `--prompt <text>`          | `-p`  | Execute a single prompt non-interactively and exit                       |
 | `--goal <text>`            | `-g`  | Run a goal with automated planning, verification, and correction         |
 | `--sandbox`                |       | Enable sandbox filesystem containment and safety checks                  |

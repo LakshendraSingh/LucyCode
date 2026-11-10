@@ -110,14 +110,21 @@ class ProviderRegistry:
     def detect_provider_name(self, model: str) -> str:
         """Detect the provider name from a model string or active environment credentials."""
         # 1. Direct local file check (GGUF, safetensors, weights)
+        expanded = os.path.expanduser(model)
         if (
-            model.endswith(".gguf")
+            model.startswith("weights:")
+            or model.endswith(".gguf")
             or model.endswith(".safetensors")
             or model.startswith("/")
             or model.startswith("./")
-            or (os.path.exists(model) and not os.path.isdir(model))
+            or (os.path.exists(expanded) and not os.path.isdir(expanded))
         ):
             return "weights"
+
+        if os.path.isdir(expanded):
+            hf_markers = ["config.json", "model.safetensors", "pytorch_model.bin", "tokenizer_config.json"]
+            if any(os.path.exists(os.path.join(expanded, m)) for m in hf_markers):
+                return "weights"
 
         # 2. Explicit prefix (e.g. "openai:gpt-4o", "gemini:gemini-2.5-flash")
         if ":" in model and not model.startswith("http"):

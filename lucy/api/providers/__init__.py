@@ -103,8 +103,19 @@ def detect_provider(model: str) -> tuple[str, str]:
         }
         return mapping.get(prefix_clean, prefix_clean), name
 
-    if model.endswith(".gguf") or model.endswith(".safetensors") or (os.path.exists(model) and not os.path.isdir(model)):
+    expanded = os.path.expanduser(model)
+    if (
+        model.startswith("weights:")
+        or model.endswith(".gguf")
+        or model.endswith(".safetensors")
+        or model.startswith(("/", "./"))
+        or (os.path.exists(expanded) and not os.path.isdir(expanded))
+    ):
         return ProviderType.WEIGHTS, model
+    if os.path.isdir(expanded):
+        hf_markers = ["config.json", "model.safetensors", "pytorch_model.bin", "tokenizer_config.json"]
+        if any(os.path.exists(os.path.join(expanded, m)) for m in hf_markers):
+            return ProviderType.WEIGHTS, model
     if model.startswith("claude-"):
         return ProviderType.ANTHROPIC, model
     if model.startswith(("gpt-", "o1-", "o3-", "o4-")):

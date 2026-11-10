@@ -32,9 +32,15 @@ cloud = [
 offline = [
     "aiohttp>=3.9",
 ]
-# Direct weight loading (Llama.cpp)
+# Direct weight loading (Llama.cpp, PyTorch & Transformers)
 local = [
     "llama-cpp-python>=0.2.75",
+]
+weights = [
+    "llama-cpp-python>=0.2.75",
+    "torch>=2.0.0",
+    "transformers>=4.38.0",
+    "accelerate>=0.26.0",
 ]
 # Voice mode
 voice = [

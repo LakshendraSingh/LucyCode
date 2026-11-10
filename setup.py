@@ -26,6 +26,12 @@ setup(
         "cloud": ["anthropic>=0.40.0"],
         "offline": ["aiohttp>=3.9"],
         "local": ["llama-cpp-python>=0.2.75"],
+        "weights": [
+            "llama-cpp-python>=0.2.75",
+            "torch>=2.0.0",
+            "transformers>=4.38.0",
+            "accelerate>=0.26.0",
+        ],
         "all": ["anthropic>=0.40.0", "aiohttp>=3.9", "llama-cpp-python>=0.2.75"],
     },
     entry_points={

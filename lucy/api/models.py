@@ -4,6 +4,7 @@ Model definitions — names, context windows, pricing, capabilities.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 
@@ -522,10 +523,33 @@ DEFAULT_OFFLINE_MODEL = "ollama:llama3.1"
 
 def resolve_model(model_str: str) -> str:
     """Resolve a model string (alias or ID) to a canonical model ID."""
+    if not model_str:
+        return model_str
     if model_str in MODELS:
         return model_str
     if model_str in MODEL_ALIASES:
         return MODEL_ALIASES[model_str]
+
+    # Explicit direct weights prefix
+    clean = model_str.strip()
+    if clean.startswith("weights:"):
+        inner = clean[8:].strip()
+        expanded = os.path.abspath(os.path.expanduser(inner))
+        return f"weights:{expanded}"
+
+    # Direct local weight file extensions
+    if clean.endswith((".gguf", ".safetensors")):
+        return f"weights:{os.path.abspath(os.path.expanduser(clean))}"
+
+    # Check filesystem for weights file or Hugging Face directory
+    expanded = os.path.abspath(os.path.expanduser(clean))
+    if os.path.isfile(expanded) and (expanded.endswith((".gguf", ".safetensors", ".bin", ".pt"))):
+        return f"weights:{expanded}"
+    if os.path.isdir(expanded):
+        hf_markers = ["config.json", "model.safetensors", "pytorch_model.bin", "tokenizer_config.json"]
+        if any(os.path.exists(os.path.join(expanded, m)) for m in hf_markers):
+            return f"weights:{expanded}"
+
     # Unknown model — pass through (supports custom/3P models)
     return model_str
 
@@ -533,7 +557,24 @@ def resolve_model(model_str: str) -> str:
 def get_model_info(model: str) -> ModelInfo | None:
     """Get model info for a given model ID."""
     resolved = resolve_model(model)
-    return MODELS.get(resolved)
+    if resolved in MODELS:
+        return MODELS[resolved]
+    if resolved.startswith("weights:") or is_offline_model(resolved):
+        target = resolved[8:] if resolved.startswith("weights:") else resolved
+        base = os.path.basename(target.rstrip("/")) or "local-weights"
+        return ModelInfo(
+            id=resolved,
+            name=f"Weights: {base}",
+            context_window=32_768,
+            max_output_tokens=4_096,
+            input_price_per_mtok=0.0,
+            output_price_per_mtok=0.0,
+            supports_thinking=False,
+            supports_tool_use=False,
+            supports_vision=False,
+            supports_pdf=False,
+        )
+    return None
 
 
 def get_context_window(model: str) -> int:

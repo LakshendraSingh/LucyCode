@@ -668,6 +668,20 @@ class DoctorCommand(Command):
         except ImportError:
             checks.append("  ⚠ Ollama: aiohttp needed (pip install aiohttp)")
 
+        # Direct model weight backends
+        try:
+            import llama_cpp
+            checks.append("  ✓ Direct GGUF weights loader (llama-cpp-python)")
+        except ImportError:
+            checks.append("  ⚠ Direct GGUF weights loader (llama-cpp-python): optional (pip install llama-cpp-python)")
+
+        try:
+            import torch
+            import transformers
+            checks.append("  ✓ Direct Safetensors/HF weights loader (torch + transformers)")
+        except ImportError:
+            checks.append("  ⚠ Direct Safetensors/HF weights loader: optional (pip install torch transformers)")
+
         # LUCY.md
         import os
         lucymd = os.path.join(state.cwd, "LUCY.md")
@@ -849,13 +863,87 @@ class ModelsCommand(Command):
                 lines.append(f"    {info.name} ({mid}){current}")
                 lines.append(f"      Context: {info.context_window:,} | Free")
 
+        # Direct weights
+        lines.append("\n  ⚡ Direct Model Weights (Local & Offline):")
+        current_w = " ← current" if state.model.startswith("weights:") else ""
+        lines.append(f"    Direct Weights (weights:<path>){current_w}")
+        lines.append("      Connect directly to local GGUF file or Hugging Face Safetensors")
+        lines.append("      Usage: /weights <path> or lucy --weights <path>")
+
         # Aliases
         lines.append("\n  🏷️  Shortcuts:")
         for alias, target in sorted(MODEL_ALIASES.items()):
             lines.append(f"    {alias} → {target}")
 
-        lines.append(f"\n  Use /model <name> to switch. Current: {state.model}")
+        lines.append(f"\n  Use /model <name> or /weights <path> to switch. Current: {state.model}")
         return CommandResult(output="\n".join(lines))
+
+
+class WeightsCommand(Command):
+    @property
+    def name(self) -> str:
+        return "weights"
+
+    @property
+    def aliases(self) -> list[str]:
+        return ["load-weights", "model-weights"]
+
+    @property
+    def description(self) -> str:
+        return "Connect directly to local model weights (GGUF or Safetensors)"
+
+    async def execute(self, args: str, state: AppState) -> CommandResult:
+        import os
+        from lucy.core.config import get_config, save_config
+
+        target = args.strip()
+        if not target:
+            if state.model.startswith("weights:"):
+                weights_path = state.model[8:]
+                return CommandResult(
+                    output=f"Currently connected to model weights:\n  Path: {weights_path}\n  Mode: Direct in-process execution (Local)"
+                )
+            return CommandResult(
+                output=(
+                    "Usage: /weights <path-to-gguf-or-safetensors>\n\n"
+                    "Connect Lucy directly to local model weights without needing an external API or server.\n\n"
+                    "Supported formats:\n"
+                    "  • GGUF single file (.gguf) via llama-cpp-python\n"
+                    "  • Hugging Face directory or safetensors (.safetensors) via PyTorch + transformers\n\n"
+                    "Examples:\n"
+                    "  /weights ~/models/llama-3.2-3b-instruct.Q4_K_M.gguf\n"
+                    "  /weights ./models/deepseek-r1-distill-qwen-7b\n"
+                    "  /weights /Volumes/Models/phi-3-mini"
+                )
+            )
+
+        expanded = os.path.abspath(os.path.expanduser(target))
+        if not os.path.exists(expanded):
+            return CommandResult(
+                error=f"Model weights not found at path: {expanded}"
+            )
+
+        model_type = "GGUF model" if expanded.endswith(".gguf") else "Hugging Face / Safetensors weights"
+        new_model = f"weights:{expanded}"
+        state.model = new_model
+
+        try:
+            config = get_config()
+            config.weights_path = expanded
+            config.model = new_model
+            save_config(config)
+        except Exception:
+            pass
+
+        return CommandResult(
+            output=(
+                f"✅ Connected directly to model weights:\n"
+                f"  • Path: {expanded}\n"
+                f"  • Type: {model_type}\n"
+                f"  • Model ID: {new_model}\n"
+                f"  • Provider: In-process local execution (Zero API costs & offline)"
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -887,6 +975,7 @@ _COMMANDS: list[Command] = [
     UndoCommand(),
     PlanCommand(),
     ModelsCommand(),
+    WeightsCommand(),
 ]
 
 

@@ -41,7 +41,32 @@ class WeightsLLMProvider(LLMProvider):
         messages: list[dict[str, Any]],
         system_prompt: str | None = None,
     ) -> list[dict[str, Any]]:
-        return messages
+        api_messages: list[dict[str, Any]] = []
+        for msg in messages:
+            role = msg.get("role", "user") if isinstance(msg, dict) else getattr(msg, "role", "user")
+            content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
+            if isinstance(content, list):
+                text_parts: list[str] = []
+                for b in content:
+                    if isinstance(b, dict):
+                        if b.get("type") == "text":
+                            text_parts.append(b.get("text", ""))
+                        elif b.get("type") == "tool_result":
+                            res = b.get("content", "")
+                            if isinstance(res, list):
+                                res = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in res)
+                            text_parts.append(f"[Tool Result]: {res}")
+                        elif "text" in b:
+                            text_parts.append(str(b["text"]))
+                    else:
+                        text = getattr(b, "text", "") or getattr(b, "content", "")
+                        if text:
+                            text_parts.append(str(text))
+                content_str = "\n".join(text_parts)
+            else:
+                content_str = str(content or "")
+            api_messages.append({"role": role, "content": content_str})
+        return api_messages
 
     async def stream(
         self,
@@ -62,7 +87,14 @@ class WeightsLLMProvider(LLMProvider):
             path = path[8:]
 
         provider = WeightsProvider(path)
-        async for chunk in provider.stream(messages, system_prompt, **kwargs):
+        norm_messages = self.translate_messages(messages, system_prompt)
+        async for chunk in provider.stream(
+            norm_messages,
+            system_prompt,
+            max_tokens=max_tokens,
+            abort_signal=abort_signal,
+            **kwargs,
+        ):
             if abort_signal and abort_signal.is_set():
                 yield {"type": "error", "error": "Request cancelled by user"}
                 return

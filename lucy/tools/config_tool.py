@@ -52,7 +52,7 @@ class ConfigTool(Tool):
             "- 'list': Show all current settings\n"
             "- 'get': Get a specific setting value\n"
             "- 'set': Change a setting value\n"
-            "Available keys: model, theme, permission_mode, thinking_enabled, "
+            "Available keys: model, weights_path, theme, permission_mode, thinking_enabled, "
             "show_cost, verbose, max_tokens, max_thinking_tokens."
         )
 
