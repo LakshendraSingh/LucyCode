@@ -786,6 +786,18 @@ class GoalEngine:
             failed_checks = [r for r in re_results if not r.passed]
             if not failed_checks:
                 logger.info("Self-correction succeeded on attempt %d for step %d!", attempt, step.id)
+                try:
+                    from lucy.core.recursive_harness import get_harness2
+                    h2 = get_harness2()
+                    clean_diag = failure_analysis.split("\n")[0].strip() if failure_analysis else "Verification fixed"
+                    h2.experience_library.add_experience(
+                        domain="debugging",
+                        lesson=f"When encountering {first_fail.strategy} failure ({first_fail.command[:50]}): {clean_diag[:140]}",
+                        trigger_pattern=rf"\b({first_fail.strategy}|debug|fix|test)\b",
+                        confidence=0.95,
+                    )
+                except Exception as ex:
+                    logger.debug("Failed saving self-correction experience: %s", ex)
                 return True
 
         return False

@@ -88,11 +88,31 @@ class TestRecursiveHarness(unittest.TestCase):
             proposed_content="Always document inputs and outputs.",
         )
 
+        async def mock_probe_executor(prompt: str, cwd: Path, model: str | None):
+            if "[Harness Rule" in prompt:
+                # Candidate succeeds on code_fibonacci
+                fib_code = (
+                    "def fibonacci(n: int):\n"
+                    "    '''Generate Fibonacci numbers up to n elements.\n"
+                    "    >>> list(fibonacci(7))\n"
+                    "    [0, 1, 1, 2, 3, 5, 8]\n"
+                    "    '''\n"
+                    "    a, b = 0, 1\n"
+                    "    for _ in range(n):\n"
+                    "        yield a\n"
+                    "        a, b = b, a + b\n"
+                )
+                (cwd / "fibonacci.py").write_text(fib_code, encoding="utf-8")
+                return {"turns": 1, "tokens": 80, "output": "Created fibonacci.py"}
+            else:
+                return {"turns": 1, "tokens": 10, "output": "Failed baseline"}
+
         # Probe against built-in task code_fibonacci
-        report = asyncio.run(self.engine.probe(mut, task_ids=["code_fibonacci"]))
+        report = asyncio.run(self.engine.probe(mut, task_ids=["code_fibonacci"], custom_executor=mock_probe_executor))
         self.assertIsInstance(report, ProbeReport)
         self.assertEqual(report.mutation_id, mut.id)
-        self.assertGreaterEqual(report.candidate_score, 0.0)
+        self.assertTrue(report.improved)
+        self.assertGreater(report.candidate_score, report.baseline_score)
         self.assertIn("code_fibonacci", report.behavioral_contrast)
 
         # Compose
@@ -103,11 +123,39 @@ class TestRecursiveHarness(unittest.TestCase):
         self.assertIsNotNone(mut.applied_experience_id)
 
     def test_end_to_end_recursive_cycle(self):
-        mut, rep, ok = asyncio.run(self.engine.run_recursive_cycle(target_name="debugging"))
+        async def mock_cycle_executor(prompt: str, cwd: Path, model: str | None):
+            if "[Harness Rule" in prompt:
+                fix_code = "def parse_mapping(data):\n    return {str(k).lower(): v for k, v in data.items()}\n"
+                (cwd / "parser.py").write_text(fix_code, encoding="utf-8")
+                return {"turns": 1, "tokens": 50, "output": "Fixed parser"}
+            return {"turns": 1, "tokens": 10, "output": "Failed"}
+
+        mut, rep, ok = asyncio.run(self.engine.run_recursive_cycle(
+            target_name="debugging",
+            custom_executor=mock_cycle_executor,
+        ))
         self.assertIsNotNone(mut)
         self.assertIsNotNone(rep)
         self.assertTrue(ok)
         self.assertTrue(mut.composed)
+
+    def test_rejection_when_no_improvement(self):
+        mut = self.engine.propose(
+            target=HarnessTarget.SYSTEM_PROMPT,
+            target_name="coding",
+            rationale="Failing probe test",
+            proposed_content="Do not create any files.",
+        )
+
+        async def mock_failing_executor(prompt: str, cwd: Path, model: str | None):
+            return {"turns": 1, "tokens": 10, "output": "Nothing done"}
+
+        report = asyncio.run(self.engine.probe(mut, task_ids=["code_fibonacci"], custom_executor=mock_failing_executor))
+        self.assertFalse(report.improved)
+
+        composed = self.engine.compose(mut, report)
+        self.assertFalse(composed)
+        self.assertFalse(mut.composed)
 
     def test_harness2_slash_commands(self):
         cmd = Harness2Command()

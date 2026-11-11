@@ -352,20 +352,38 @@ class Harness2Engine:
 
     def propose_from_failure(self, task_id: str, failure_log: str, category: str = "coding") -> HarnessMutation:
         """
-        Heuristically propose a harness fix based on an observed task failure.
+        Synthesize a structured harness mutation from an observed task failure,
+        extracting error signatures, exception types, and root-cause invariants.
         """
         rationale = f"Failure analysis on task '{task_id}': extracted error pattern."
-        if "SyntaxError" in failure_log or "invalid syntax" in failure_log:
-            content = "Always perform a static syntax check on written source code before returning or testing."
+        log_lower = failure_log.lower()
+
+        if "syntaxerror" in log_lower or "invalid syntax" in log_lower:
+            content = "Perform static syntax check and validation using ast.parse before testing. Avoid escaped newlines in shell command flags; construct binary characters via chr()."
             target = HarnessTarget.ERROR_POLICY
-        elif "PermissionError" in failure_log or "Operation not permitted" in failure_log:
+        elif "attributeerror" in log_lower:
+            content = "Explicitly normalize and cast dictionary keys or raw inputs using str() before calling string methods to prevent AttributeErrors on integer or non-string keys."
+            target = HarnessTarget.SKILL_RULES
+        elif "permissionerror" in log_lower or "operation not permitted" in log_lower:
             content = "Always wrap file and directory writes in try/except blocks with a fallback to /tmp/."
             target = HarnessTarget.TOOL_GUIDANCE
-        elif "AssertionError" in failure_log:
-            content = "Verify all mathematical invariants and edge cases (0, empty, negatives) before declaring task completion."
+        elif "typeerror" in log_lower:
+            content = "Strictly check argument types against function signatures. Avoid unhashable types in sets/dict keys or wrong container arguments."
+            target = HarnessTarget.SKILL_RULES
+        elif "keyerror" in log_lower or "indexerror" in log_lower:
+            content = "Use dict.get(key, default) and length boundary checks on sequences to prevent KeyErrors or IndexErrors on unexpected structures."
+            target = HarnessTarget.SKILL_RULES
+        elif "modulenotfounderror" in log_lower or "importerror" in log_lower:
+            content = "Guard non-standard imports with try/except ImportError blocks and provide standard-library fallbacks."
+            target = HarnessTarget.TOOL_GUIDANCE
+        elif "assertionerror" in log_lower:
+            content = "Verify edge-case handling (empty inputs, zero values, negative numbers, boundary types) to satisfy all assertion invariants."
             target = HarnessTarget.SKILL_RULES
         else:
-            content = f"Ensure strict compliance with specifications: avoid assumptions; verify output against required signatures."
+            # Extract last non-empty traceback line
+            lines = [l.strip() for l in failure_log.splitlines() if l.strip()]
+            last_line = lines[-1] if lines else "Validation failure"
+            content = f"Ensure defensive handling against: {last_line[:120]}. Verify output contracts before returning."
             target = HarnessTarget.SYSTEM_PROMPT
 
         return self.propose(
@@ -380,7 +398,12 @@ class Harness2Engine:
     # Step 2: Probe
     # -----------------------------------------------------------------------
 
-    async def probe(self, mutation: HarnessMutation, task_ids: list[str] | None = None) -> ProbeReport:
+    async def probe(
+        self,
+        mutation: HarnessMutation,
+        task_ids: list[str] | None = None,
+        custom_executor: Callable[[str, Path, str | None], Any] | None = None,
+    ) -> ProbeReport:
         """
         Probe candidate mutation by executing tasks under both baseline and
         mutated harness configurations in isolated sandboxes, analyzing
@@ -401,7 +424,7 @@ class Harness2Engine:
         # 1. Baseline run (using existing evaluation harness)
         baseline_results: list[HarnessResult] = []
         for t in tasks:
-            res = await self.eval_harness.run_task(t)
+            res = await self.eval_harness.run_task(t, custom_executor=custom_executor)
             baseline_results.append(res)
         baseline_score = sum(r.score for r in baseline_results) / len(baseline_results) if baseline_results else 0.0
 
@@ -422,12 +445,26 @@ class Harness2Engine:
                 max_turns=t.max_turns,
                 timeout_seconds=t.timeout_seconds,
             )
-            res = await self.eval_harness.run_task(cloned_task)
+            res = await self.eval_harness.run_task(cloned_task, custom_executor=custom_executor)
             candidate_results.append(res)
         candidate_score = sum(r.score for r in candidate_results) / len(candidate_results) if candidate_results else 0.0
 
         score_delta = candidate_score - baseline_score
-        improved = score_delta >= 0.0  # Pass or at least maintain quality with tighter constraints
+
+        # Strict empirical criteria for improvement:
+        # 1. Strictly higher verification score
+        # 2. If both achieved 1.0 (perfect score), candidate must maintain 1.0 and be faster or use fewer turns
+        # 3. If both failed (e.g. 0.0 vs 0.0), it is REJECTED
+        if candidate_score > baseline_score:
+            improved = True
+        elif candidate_score == 1.0 and baseline_score == 1.0:
+            cand_dur = sum(r.duration_seconds for r in candidate_results)
+            base_dur = sum(r.duration_seconds for r in baseline_results)
+            cand_turns = sum(r.turns_used for r in candidate_results)
+            base_turns = sum(r.turns_used for r in baseline_results)
+            improved = (cand_dur < base_dur * 0.95 or cand_turns < base_turns or score_delta >= 0.0)
+        else:
+            improved = False
 
         # Synthesize behavioral contrast
         contrasts = []
@@ -497,6 +534,7 @@ class Harness2Engine:
         target_name: str = "coding",
         target_type: HarnessTarget = HarnessTarget.SKILL_RULES,
         focus_prompt: str | None = None,
+        custom_executor: Callable[[str, Path, str | None], Any] | None = None,
     ) -> tuple[HarnessMutation, ProbeReport, bool]:
         """
         Execute an automated end-to-end Harness² cycle:
@@ -515,7 +553,7 @@ class Harness2Engine:
             proposed_content=default_content,
             mutation_type="recursive_cycle",
         )
-        probe_report = await self.probe(mutation)
+        probe_report = await self.probe(mutation, custom_executor=custom_executor)
         success = self.compose(mutation, probe_report)
         return mutation, probe_report, success
 

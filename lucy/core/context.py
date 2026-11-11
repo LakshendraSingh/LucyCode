@@ -167,6 +167,19 @@ def build_system_prompt(
     except Exception as e:
         logger.debug("Failed to inject learned corrections: %s", e)
 
+    # ── Recursive Harness Experience Library Injection ──
+    try:
+        from lucy.core.recursive_harness import get_harness2
+        h2 = get_harness2()
+        experience_text = h2.experience_library.format_for_prompt(
+            context=f"{user_prompt or ''} {cwd or ''}",
+            max_items=3,
+        )
+        if experience_text:
+            sections.append(f"<harness_experience_rules>\n{experience_text}\n</harness_experience_rules>")
+    except Exception as e:
+        logger.debug("Failed to inject harness2 experiences: %s", e)
+
     if lucymd:
         sections.append(f"<user_instructions>\n{lucymd}\n</user_instructions>")
 
