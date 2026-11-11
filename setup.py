@@ -1,11 +1,53 @@
-"""Compatibility setup.py for older pip versions."""
-from setuptools import setup, find_packages
+"""Compatibility setup.py with native C extensions builder."""
+import os
+import subprocess
+try:
+    from setuptools import setup, find_packages
+    from setuptools.command.build_py import build_py
+    from setuptools.command.develop import develop
+    _HAS_SETUPTOOLS = True
+except ImportError:
+    from distutils.core import setup
+    find_packages = lambda: ["lucy"]
+    build_py = object
+    develop = object
+    _HAS_SETUPTOOLS = False
+
+
+def build_native_extensions():
+    native_dir = os.path.join(os.path.dirname(__file__), "native")
+    if os.path.exists(native_dir) and os.path.exists(os.path.join(native_dir, "Makefile")):
+        try:
+            subprocess.run(["make", "-C", native_dir], check=False)
+        except Exception:
+            pass
+
+
+class CustomBuildPy(build_py):
+    def run(self):
+        build_native_extensions()
+        super().run()
+
+
+class CustomDevelop(develop):
+    def run(self):
+        build_native_extensions()
+        super().run()
+
+
+cmdclass_dict = {}
+if _HAS_SETUPTOOLS:
+    cmdclass_dict = {
+        "build_py": CustomBuildPy,
+        "develop": CustomDevelop,
+    }
 
 setup(
     name="lucycode",
     version="0.3.0",
     description="Lucy Code — An AI-powered agentic coding assistant CLI",
     packages=find_packages(),
+    cmdclass=cmdclass_dict,
     python_requires=">=3.9",
     install_requires=[
         "rich>=13.7",

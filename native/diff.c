@@ -47,7 +47,6 @@ int lucy_diff(
     
     /* Simple line-by-line comparison for now */
     int pos = 0;
-    int max_i = old_count > new_count ? old_count : new_count;
     int i_old = 0, i_new = 0;
     
     while (i_old < old_count || i_new < new_count) {

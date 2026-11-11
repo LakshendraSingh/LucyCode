@@ -537,6 +537,13 @@ def resolve_model(model_str: str) -> str:
         expanded = os.path.abspath(os.path.expanduser(inner))
         return f"weights:{expanded}"
 
+    # Local GGUF / weights file specified via llamacpp: or local:
+    if clean.startswith(("llamacpp:", "local:")):
+        inner = clean.split(":", 1)[1].strip()
+        expanded_inner = os.path.abspath(os.path.expanduser(inner))
+        if os.path.isfile(expanded_inner) or inner.endswith((".gguf", ".safetensors")):
+            return f"weights:{expanded_inner}"
+
     # Direct local weight file extensions
     if clean.endswith((".gguf", ".safetensors")):
         return f"weights:{os.path.abspath(os.path.expanduser(clean))}"

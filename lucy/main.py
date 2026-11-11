@@ -953,6 +953,7 @@ def _tool_summary(name: str, inp: dict) -> str:
 @click.option("--goal", default=None, help="Run in autonomous goal execution mode")
 @click.option("--resume-goal", default=None, help="Resume an autonomous goal execution by ID")
 @click.option("--serve-mcp", is_flag=True, help="Start Lucy as an MCP server")
+@click.option("--lsp", is_flag=True, default=False, help="Start Lucy as a Language Server Protocol (LSP) server for VS Code / IDEs")
 @click.option("--parallel-tools/--no-parallel-tools", default=True, help="Enable parallel tool execution (default: on)")
 @click.option("--sandbox", is_flag=True, default=False, help="Enable filesystem & command sandbox mode")
 @click.option("--sandbox-mode", default=None, type=click.Choice(["workspace", "strict", "read_only"]), help="Sandbox isolation profile (workspace, strict, read_only)")
@@ -980,6 +981,7 @@ def cli(
     goal: str | None,
     resume_goal: str | None,
     serve_mcp: bool,
+    lsp: bool,
     parallel_tools: bool,
     sandbox: bool,
     sandbox_mode: str | None,
@@ -1038,6 +1040,11 @@ def cli(
         from lucy.services.mcp import MCPServerHost
         host = MCPServerHost()
         asyncio.run(host.start(transport="stdio"))
+        return
+
+    if lsp:
+        from lucy.services.lsp_server import run_lsp_server
+        asyncio.run(run_lsp_server())
         return
 
     if list_sessions_flag:

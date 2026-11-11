@@ -607,6 +607,7 @@ Type `/` in the interactive REPL to trigger system commands:
 | `--harness2 [domain]`      |       | Run Harness² recursive self-improvement cycle (`coding`, `debugging`)    |
 | `--firebase`               |       | Start Firebase mobile remote bridge daemon                               |
 | `--serve-mcp`              |       | Run Lucy as an MCP server for external IDEs                              |
+| `--lsp`                    |       | Start Lucy as an LSP language server for VS Code & external editors      |
 | `--verbose`                | `-v`  | Enable detailed debug logs                                               |
 
 ---
@@ -690,5 +691,5 @@ Lucy Code is an AI-powered developer tool driven by Large Language Models. While
 ---
 
 <p align="center">
-  <b>Lucy Code</b> — Built with ❤️ for the future of autonomous software and engineering.
+  <b>Lucy Code</b> — Built for the future of autonomous software and engineering.
 </p>
